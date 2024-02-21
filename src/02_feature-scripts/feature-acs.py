@@ -1,12 +1,14 @@
+import argparse
 import numpy as np
 import pandas as pd
 from numba import njit
-from pydivsufsort import divsufsort, kasai, common_substrings
+from pydivsufsort import divsufsort, kasai
 import numba
 import concurrent.futures
 import threading
 from threading import Lock
 from tqdm import tqdm
+from utils import replace_degenerate_nucleotides, remove_degenerate_nucleotides
 
 lock = Lock()
 
@@ -38,7 +40,7 @@ def safe_divsufsort_kasai(S):
     """
     with lock:
         # Ensure that divsufsort is called in a thread-safe way
-        SA = get_SA(S)  # Assuming 'get_SA' is a pre-defined function for divsufsort
+        SA = divsufsort(S)  # Assuming 'get_SA' is a pre-defined function for divsufsort
     return SA
 
 @numba.njit
@@ -137,7 +139,7 @@ def main():
     print(f"Running ACS with {args.Degenerate}")
     print("Loading Data...")
     
-    data = pd.read_parquet('../../data/processed/cov-19.parquet', engine='pyarrow')
+    data = pd.read_parquet('../../data/processed/mock_data.parquet', engine='pyarrow')
 
     
     # Preprocessing the data based on the degenerate nucleotides option.
@@ -172,7 +174,7 @@ def main():
     acs_data = pd.DataFrame(acs_distances)
     acs_data["Target"] = data["Lineage"].tolist()
     acs_data["Train"] = data["Train"].tolist()
-    acs_data.to_parquet(f'../../data/features/ACS_{args.Degenerate}.parquet', engine='pyarrow')
+    acs_data.to_parquet(f'../../data/features/ACS_{args.Degenerate.lower()}.parquet', engine='pyarrow')
 
 if __name__ == "__main__":
     main()
