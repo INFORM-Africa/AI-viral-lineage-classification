@@ -139,7 +139,7 @@ def main():
     print(f"Running ACS with {args.Degenerate}")
     print("Loading Data...")
     
-    data = pd.read_parquet('../../data/processed/mock_data.parquet', engine='pyarrow')
+    data = pd.read_parquet('../../data/processed/cov-19.parquet', engine='pyarrow')
 
     
     # Preprocessing the data based on the degenerate nucleotides option.
