@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import numpy as np
 import pyfftw
@@ -102,7 +103,7 @@ def main():
     print(f"Running DSP with {args.Degenerate} option and {args.Numeric} mapping.")
     print("Loading data...")
 
-    data = pd.read_parquet('../../data/processed/mock_data.parquet', engine='pyarrow')
+    data = pd.read_parquet('../../data/processed/cov-19.parquet', engine='pyarrow')
 
     # Preprocessing the data based on the degenerate nucleotides option.
     if args.Degenerate == 'Replace':
@@ -115,13 +116,13 @@ def main():
     lengths = data["Sequence"].str.len()
     median_length = int(lengths.median())
 
-    if args.Numeric = "Real":
+    if args.Numeric == "Real":
         mapping = np.array([-1.5, 0.5, -0.5, 1.5], dtype=np.float32)  # A, C, G, T mapping in order
-    elif args.Numeric = "PP":
+    elif args.Numeric == "PP":
         mapping = np.array([-1, 1, -1, 1], dtype=np.float32)  # A, C, G, T mapping in order
-    elif args.Numeric = "JustA":
+    elif args.Numeric == "JustA":
         mapping = np.array([1, 0, 0, 0], dtype=np.float32)  # A, C, G, T mapping in order
-    elif args.Numeric = "EIIP":
+    elif args.Numeric == "EIIP":
         mapping = np.array([0.1260, 0.1340, 0.0806, 0.1335], dtype=np.float32)  # A, C, G, T mapping in order
 
     data = data.reset_index()
@@ -136,5 +137,7 @@ def main():
     results["Train"] = data["Train"].tolist()
 
     results.columns = results.columns.astype(str)
-    results.to_parquet(f'../../data/features/DSP_{args.Degenerate.lower()}_{args.Numeric.lower()}".parquet', engine='pyarrow')
+    results.to_parquet(f'../../data/features/DSP_{args.Degenerate.lower()}_{args.Numeric.lower()}.parquet', engine='pyarrow')
 
+if __name__ == "__main__":
+    main()

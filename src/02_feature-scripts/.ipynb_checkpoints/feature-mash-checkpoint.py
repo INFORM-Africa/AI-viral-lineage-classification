@@ -3,6 +3,8 @@ import numpy as np
 import mmh3
 from collections import defaultdict
 from tqdm import tqdm
+import argparse
+from utils import replace_degenerate_nucleotides, remove_degenerate_nucleotides
 
 def generate_kmers(sequence, k):
     """
@@ -51,7 +53,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='Process DNA sequences with Chaos Game Representation.')
     parser.add_argument('-d', '--Degenerate', choices=['Replace', 'Remove'], required=True, help='Whether to replace or remove degenerate nucleotides.')
-    parser.add_argument('-k', '--Word_Length', type=int, choices=[13], required=True, help='Length of k-mers.')
+    parser.add_argument('-k', '--Word_Length', type=int, required=True, help='Length of k-mers.')
     args = parser.parse_args()
     
     print(f"Running Mash Sketch with {args.Degenerate} option at k={args.Word_Length}.")
@@ -62,10 +64,10 @@ def main():
     # Process degenerate nucleotides based on user input
     if args.Degenerate == 'Replace':
         print("Replacing degenerate nucleotides...")
-        data = replace_deg(data)
+        data = replace_degenerate_nucleotides(data)
     elif args.Degenerate == 'Remove':
         print("Removing degenerate nucleotides...")
-        data = remove_deg(data)
+        data = remove_degenerate_nucleotides(data)
 
     k = args.Word_Length
     sketch_size = 1000
@@ -74,12 +76,12 @@ def main():
 
     sketch_array = []
     for genome in tqdm(data["Sequence"], desc="Creating Mash Sketches"):
-        sketch_array.append(create_optimized_mash_sketch(genome, k, sketch_size))
+        sketch_array.append(create_mash_sketch(genome, k, sketch_size))
 
     mash_data = pd.DataFrame(sketch_array)
     mash_data["Target"] = data["Lineage"].tolist()
     mash_data["Train"] = data["Train"].tolist()
-    mash_data.to_parquet(f'../../data/features/MASH_sketch{args.Degenerate}.parquet', engine='pyarrow')
+    mash_data.to_parquet(f'../../data/features/MASH_sketch{args.Degenerate.lower()}_k={args.Word_Length}.parquet', engine='pyarrow')
 
 if __name__ == "__main__":
     main()

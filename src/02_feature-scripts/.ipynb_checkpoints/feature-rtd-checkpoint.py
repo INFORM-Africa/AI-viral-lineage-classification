@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 import numpy as np
 import copy
@@ -71,15 +72,15 @@ def main():
     print("Loading data...")
 
     # Load the preprocessed DNA sequence data from a Parquet file
-    data = pd.read_parquet('../../data/processed/mock_data.parquet', engine='pyarrow')
+    data = pd.read_parquet('../../data/processed/cov-19.parquet', engine='pyarrow')
 
     # Process degenerate nucleotides based on the user's choice
     if args.Degenerate == 'Replace':
         print("Replacing degenerate nucleotides...")
-        data = replace_deg(data)  # Replace degenerate nucleotides as per a predefined scheme
+        data = replace_degenerate_nucleotides(data)  # Replace degenerate nucleotides as per a predefined scheme
     elif args.Degenerate == 'Remove':
         print("Removing degenerate nucleotides...")
-        data = remove_deg(data)  # Remove any degenerate nucleotides from the sequences
+        data = remove_degenerate_nucleotides(data)  # Remove any degenerate nucleotides from the sequences
 
     # Set the k-mer length as specified by the user
     k = args.Word_Length

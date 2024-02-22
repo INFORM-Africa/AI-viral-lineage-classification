@@ -68,10 +68,10 @@ def main():
     # Process degenerate nucleotides based on user input
     if args.Degenerate == 'Replace':
         print("Replacing degenerate nucleotides...")
-        data = replace_deg(data)
+        data = replace_degenerate_nucleotides(data)
     elif args.Degenerate == 'Remove':
         print("Removing degenerate nucleotides...")
-        data = remove_deg(data)
+        data = remove_degenerate_nucleotides(data)
 
     print("Generating k-mer features...")
     # Generate k-mer features
@@ -80,7 +80,7 @@ def main():
     # Create DataFrame from k-mer features and add target labels
     kmer_df = pd.DataFrame(kmer_features)
     kmer_df["Target"] = data["Lineage"].tolist()
-    kmer_df["Test"] = data["Test"].tolist()
+    kmer_df["Train"] = data["Train"].tolist()
 
     # Save k-mer features to a Parquet file
     output_filename = f'../../data/features/{args.Word_Length}-mer_{args.Degenerate.lower()}.parquet'

@@ -126,8 +126,16 @@ def acs(A, B):
 
     f2 = process_second_loop(LCP, same_seq, n)  # Process the second loop to refine the result
 
-    # Merge the results from both loops
-    f = np.maximum
+    f = np.maximum(f1, f2)
+        
+    A_scores = f[is_A]
+    B_scores = f[~is_A]
+    
+    d_AB = np.log(len(B))/np.mean(A_scores) - 2*np.log(len(A))/len(A)
+    d_BA = np.log(len(A))/np.mean(B_scores) - 2*np.log(len(B))/len(B)
+    
+    d_ACS = (d_AB + d_BA)/2
+    return d_ACS
 
 def main():
 

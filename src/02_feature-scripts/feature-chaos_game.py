@@ -3,44 +3,42 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from utils import replace_degenerate_nucleotides, remove_degenerate_nucleotides
+from numba import jit
 
-def generate_chaos_game_representation(sequence, resolution):
-    """
-    Generates a Chaos Game Representation (CGR) of a DNA sequence.
+@jit(nopython=True)
+def generate_chaos_game_representation(sequence, resolution, nucleotide_mapping):
+    image = np.zeros((resolution, resolution), dtype=np.int16)
 
-    Parameters:
-    - sequence (str): The DNA sequence to be processed.
-    - resolution (int): The resolution of the CGR image, determining its size.
-
-    Returns:
-    - np.array: A 2D array representing the CGR image.
-    """
-    # Mapping nucleotides to their respective points in the unit square.
-    nucleotide_mapping = {'A': (0, 0), 'C': (0, 1), 'G': (1, 1), 'T': (1, 0)}
-    image = np.zeros((resolution, resolution))
-
-    # Starting point in the center of the square.
     x, y = 0.5, 0.5
     scale = resolution - 1
 
-    # Iterating through each nucleotide in the sequence.
-    for nucleotide in sequence:
-        if nucleotide in nucleotide_mapping:
-            corner_x, corner_y = nucleotide_mapping[nucleotide]
-            x = (x + corner_x) / 2
-            y = (y + corner_y) / 2
+    for char in sequence:
+        if char == 'A':
+            index = 0
+        elif char == 'C':
+            index = 1
+        elif char == 'G':
+            index = 2
+        elif char == 'T':
+            index = 3
+        else:
+            continue  # Skip unknown characters
 
-            # Mapping the continuous position to discrete pixel coordinates.
-            ix, iy = int(x * scale), int(y * scale)
-            image[iy, ix] += 1
+        corner_x, corner_y = nucleotide_mapping[index]
+        x = (x + corner_x) / 2
+        y = (y + corner_y) / 2
 
-    return image
+        ix, iy = int(x * scale), int(y * scale)
+        image[iy, ix] += 1
+
+    return image.flatten()
+
 
 def main():
     parser = argparse.ArgumentParser(description='Process DNA sequences using Chaos Game Representation (CGR).')
     parser.add_argument('-d', '--Degenerate', choices=['Replace', 'Remove'], required=True,
                         help='Specify how to handle degenerate nucleotides: Replace or Remove.')
-    parser.add_argument('-r', '--Resolution', type=int, choices=[64, 128], required=True,
+    parser.add_argument('-r', '--Resolution', type=int, choices=[64, 128, 256], required=True,
                         help='Resolution of the CGR image (e.g., 64x64 or 128x128 pixels).')
     args = parser.parse_args()
 
@@ -59,11 +57,17 @@ def main():
         data = remove_degenerate_nucleotides(data)
 
     print("Generating Chaos Game Representation...")
+    
+    # Preallocate numpy array
+    chaos_data = np.zeros((len(data), args.Resolution * args.Resolution), dtype=np.int16)
+    nucleotide_mapping = np.array([[0, 0], [0, 1], [1, 1], [1, 0]], dtype=np.float32)  # A, C, G, T
 
-    # Generating FCGR for each sequence in the dataset.
-    cgr_images = [generate_chaos_game_representation(sequence, args.Resolution) for sequence in tqdm(data['Sequence'], desc="Generating FCGR Images")]
-    cgr_flattened = [image.flatten() for image in cgr_images]
-    chaos_data = pd.DataFrame(cgr_flattened)
+    # Fill in the preallocated array
+    for i, sequence in tqdm(enumerate(data["Sequence"]), total=len(data), desc="Generating CGR"):
+        chaos_data[i, :] = generate_chaos_game_representation(sequence, args.Resolution, nucleotide_mapping)
+
+    # Convert the numpy array to a pandas DataFrame if needed
+    chaos_data = pd.DataFrame(chaos_data)
     chaos_data["Target"] = data["Lineage"].tolist()
     chaos_data["Train"] = data["Train"].tolist()
 

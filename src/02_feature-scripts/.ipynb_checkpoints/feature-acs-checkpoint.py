@@ -1,12 +1,14 @@
+import argparse
 import numpy as np
 import pandas as pd
 from numba import njit
-from pydivsufsort import divsufsort, kasai, common_substrings
+from pydivsufsort import divsufsort, kasai
 import numba
 import concurrent.futures
 import threading
 from threading import Lock
 from tqdm import tqdm
+from utils import replace_degenerate_nucleotides, remove_degenerate_nucleotides
 
 lock = Lock()
 
@@ -38,7 +40,7 @@ def safe_divsufsort_kasai(S):
     """
     with lock:
         # Ensure that divsufsort is called in a thread-safe way
-        SA = get_SA(S)  # Assuming 'get_SA' is a pre-defined function for divsufsort
+        SA = divsufsort(S)  # Assuming 'get_SA' is a pre-defined function for divsufsort
     return SA
 
 @numba.njit
@@ -124,8 +126,16 @@ def acs(A, B):
 
     f2 = process_second_loop(LCP, same_seq, n)  # Process the second loop to refine the result
 
-    # Merge the results from both loops
-    f = np.maximum
+    f = np.maximum(f1, f2)
+        
+    A_scores = f[is_A]
+    B_scores = f[~is_A]
+    
+    d_AB = np.log(len(B))/np.mean(A_scores) - 2*np.log(len(A))/len(A)
+    d_BA = np.log(len(A))/np.mean(B_scores) - 2*np.log(len(B))/len(B)
+    
+    d_ACS = (d_AB + d_BA)/2
+    return d_ACS
 
 def main():
 
@@ -172,7 +182,7 @@ def main():
     acs_data = pd.DataFrame(acs_distances)
     acs_data["Target"] = data["Lineage"].tolist()
     acs_data["Train"] = data["Train"].tolist()
-    acs_data.to_parquet(f'../../data/features/ACS_{args.Degenerate}.parquet', engine='pyarrow')
+    acs_data.to_parquet(f'../../data/features/ACS_{args.Degenerate.lower()}.parquet', engine='pyarrow')
 
 if __name__ == "__main__":
     main()

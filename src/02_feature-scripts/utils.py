@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import random
 
 def replace_degenerate_nucleotides(genomes):
     # Define the mapping of degenerate characters to their possible bases
