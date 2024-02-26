@@ -48,7 +48,7 @@ def evaluate_model_xgb(X_train, y_train, X_val, y_val, params, file_name):
     """
     print(f"Training XGBoost: {params}")
     # Adjust tree_method and device, and move early_stopping_rounds to constructor
-    model = XGBClassifier(n_jobs=-1, tree_method='hist', early_stopping_rounds=10, **params)
+    model = XGBClassifier(tree_method='hist', device = "cuda", early_stopping_rounds=10, **params)
 
     model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=False)
 
@@ -102,8 +102,8 @@ def main():
     X_train, y_train, X_val, y_val = load_data(file_name)
 
     param_grid = {
-        'max_depth': [3, 6, 8, 10],
-        'n_estimators': [250],
+        'max_depth': [1,2,3,4,5],
+        'n_estimators': [100],
         'eval_metric': ['mlogloss']  # or use 'auc', 'error', etc. based on your needs
     }
 

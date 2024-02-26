@@ -45,7 +45,7 @@ def compute_rtd_feature_vector(genome, k, kmer_stats):
                 stats['count'] += 1
             stats['last_seen'] = i
 
-    feature_vector = np.zeros(2 * len(kmer_stats))
+    feature_vector = np.zeros(2 * len(kmer_stats), dtype=np.float32)
     for idx, (kmer, stats) in enumerate(kmer_stats.items()):
         if stats['count'] > 0:
             mean = stats['sum'] / stats['count']
@@ -87,15 +87,13 @@ def main():
 
     # Precompute a dictionary with statistics for all possible k-mers
     kmer_stats = precompute_kmer_dict(k)
+    
+    rtd_arrays = np.zeros((len(data), len(kmer_stats)*2), dtype=np.float32)
 
-    rtd_arrays = []
-
-    print("Generating RTD features...")
-    # Iterate over each genome in the dataset to compute its RTD feature vector
-    for genome in tqdm(data["Sequence"], desc="Computing RTD feature vectors"):
-        rtd_feature_vector = compute_rtd_feature_vector(genome, k, copy.deepcopy(kmer_stats))
-        rtd_arrays.append(rtd_feature_vector)
-
+    # Fill in the preallocated array
+    for i, sequence in tqdm(enumerate(data["Sequence"]), total=len(data), desc="Computing RTD feature vectors"):
+        rtd_arrays[i, :] = compute_rtd_feature_vector(sequence, k, copy.deepcopy(kmer_stats))
+        
     # Convert the list of RTD feature vectors into a DataFrame
     rtd_data = pd.DataFrame(rtd_arrays)
 
