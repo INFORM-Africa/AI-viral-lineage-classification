@@ -2,3 +2,5 @@
 src/01_feature_extraction/models/*
 src/01_feature_extraction/results/*
 src/01_feature_extraction/reports/*
+.ipynb_checkpoints/
+__pycache__/
