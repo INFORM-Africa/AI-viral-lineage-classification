@@ -4,3 +4,5 @@ src/01_feature_extraction/results/*
 src/01_feature_extraction/reports/*
 .ipynb_checkpoints/
 __pycache__/
+src_aurel/data/
+src_aurel/*.png
