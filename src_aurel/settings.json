@@ -1,4 +1,5 @@
 {
     "model_performance_dir" : "Performances/",
-    "plot_dir" : "Plots/"
+    "plot_dir" : "Plots/",
+    "bases": ["A", "C", "G", "T", "Y", "R", "K", "S", "W", "M", "B", "D", "H", "V", "N"]
 }

@@ -9,15 +9,15 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 
+
 class CenterLossNN(nn.Module):
     def __init__(self, num_classes, num_classes_per_level, lambda_values):
         super(CenterLossNN, self).__init__()
         self.num_classes = num_classes
         self.lambda_values = lambda_values
 
-        
         self.base_model = models.resnet18(pretrained=True)
-        
+
         for param in self.base_model.parameters():
             param.requires_grad = False
 
@@ -45,7 +45,7 @@ class CenterLossNN(nn.Module):
         for i in range(features.size(0)):
             center_loss += torch.sum((features[i] - batch_centers[labels[i].item()]) ** 2)
 
-        classification_losses = []    
+        classification_losses = []
         for fc_layer in self.fc_layers:
             x = fc_layer(x)
             loss = nn.CrossEntropyLoss()(x, labels)

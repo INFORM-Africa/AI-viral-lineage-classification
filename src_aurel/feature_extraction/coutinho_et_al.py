@@ -10,6 +10,7 @@ import itertools
 import collections
 import numpy as np
 from typing import Iterable
+from timebudget import timebudget
 
 class CoutinhoFeatures:
     def __init__(self, k:int=7, resolution:int=None):
@@ -25,6 +26,7 @@ class CoutinhoFeatures:
         features = [self.extract_single(seq=sequence, b=b) for sequence in sequences]
         return np.array(features)
 
+    @timebudget
     def extract_single(self, seq:str, b:int=8) -> np.ndarray:
         sub_seqs = [seq[i : i + self.k] for i in range(len(seq) - self.k + 1)]
         kmer_counts = collections.Counter(sub_seqs)

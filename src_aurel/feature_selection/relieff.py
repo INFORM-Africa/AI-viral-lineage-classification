@@ -1,7 +1,7 @@
 import numpy as np
 
 class ReliefF:
-    def __init__(self, n_instances=1000, n_neighbors=10):
+    def __init__(self, n_instances, n_neighbors=10):
         self.n_instances = n_instances
         self.n_neighbors = n_neighbors
         self.feature_importances_ = None
@@ -10,13 +10,14 @@ class ReliefF:
     def init_weights(self, n_features):
         self.feature_importances_ = np.zeros(n_features)
 
-    def fit(self, X, y, n_select, is_discrete, n_iterations=1000):
+    def fit(self, X, y, n_select, is_discrete, n_iterations=10):
         self.init_weights(X.shape[1])
         subset_indices = np.random.choice(X.shape[0], self.n_instances, replace=False)
         X_subset = X[subset_indices]
         y_subset = y[subset_indices]
+        classes = np.unique(y)
+        classes_probs = np.array([np.mean(y == c) for c in classes])
         classes = np.unique(y_subset)
-        classes_probs = np.array([np.mean(y_subset == c) for c in classes])
 
         for _ in range(n_iterations):
             R_index = np.random.choice(self.n_instances)

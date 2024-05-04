@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 from typing import Iterable, Literal
+from timebudget import timebudget
 
 class ConventionalFeatures:
     def __init__(self):
@@ -11,6 +12,7 @@ class ConventionalFeatures:
         return np.stack(features)
 
     @staticmethod
+    @timebudget
     def extract_binary_features_single(sequence:str, fourier:bool=False) -> np.ndarray:
         
         sequence_arr = np.array(list(sequence))
@@ -21,6 +23,7 @@ class ConventionalFeatures:
             np.where(sequence_arr == 'T', 1, 0),
             np.where(sequence_arr == 'G', 1, 0)
         ])
+        features = features.T
 
         if fourier:
             features = np.fft.fft(features, axis=-1)
@@ -33,6 +36,7 @@ class ConventionalFeatures:
         return np.array(features)
 
     @staticmethod
+    @timebudget
     def extract_kmers_features_single(sequence: str, k:int, normalize: bool=False) -> np.ndarray:
         bases = ['A', 'C', 'T', 'G']
         kmers = [''.join(kmer) for kmer in itertools.product(bases, repeat=k)]
@@ -57,6 +61,7 @@ class ConventionalFeatures:
         return np.array(features)
 
     @staticmethod
+    @timebudget
     def extract_fcgr_features_single(sequence:str, resolution:Literal[64, 128, 256]=128, fourier:bool=False) -> np.ndarray:
         coordinates = {
             'A': (0, 0),

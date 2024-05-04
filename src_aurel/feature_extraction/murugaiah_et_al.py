@@ -10,6 +10,7 @@ from typing import Iterable, Tuple
 import itertools
 import math
 import numpy as np
+from timebudget import timebudget
 
 class MurugaiahFeatures:
     def __init__(self):
@@ -22,8 +23,8 @@ class MurugaiahFeatures:
     def extract_single(self, seq:str, f:bool=False) -> np.array:
         f1_features = self._feature_based_on_storage(seq) # 2 features
         f2_features = self._feature_based_on_bases_frequency(seq) # 85 features
-        f3_features = self._feature_based_on_arrangement_of_patterns(seq) # 6 features
         f4_features = self._feature_based_on_composition_of_amino_acids(seq) # 27 features
+        f3_features = self._feature_based_on_arrangement_of_patterns(seq) # 6 features
         features = np.concatenate((f1_features, f2_features, f3_features, f4_features)) # 120 features
 
         if f:
@@ -61,10 +62,34 @@ class MurugaiahFeatures:
 
         f2 = (n_count, *bases_occurrences, *dimers_occurrences, *codons_occurrences)
         return f2 # 85 features
+    
+    @staticmethod
+    def count_palindrome_patterns(sequence:str, max_length:int) -> int:
+        length = len(sequence)
+        dp = [[0 for x in range(length)] for y in range(length)]
+        
+        # All substrings of length 1 are palindromes
+        for i in range(length):
+            dp[i][i] = 1
+        
+        # Check for sub-string of length 2
+        for i in range(length - 1):
+            if sequence[i] == sequence[i+1]:
+                dp[i][i+1] = 1
+        
+        # Check for lengths greater than 2
+        for cl in range(3, max_length):
+            for i in range(length - cl + 1):
+                j = i + cl - 1
+                # Check if the first and last characters are the same
+                if (sequence[i] == sequence[j] and dp[i + 1][j - 1]):
+                    dp[i][j] = 1
+        
+        # Return the count of palindrome patterns
+        return sum(map(sum, dp))
 
     @staticmethod
-    def _feature_based_on_arrangement_of_patterns(sequence:str) -> Tuple[float, ...]:
-        bases = ['A', 'C', 'G', 'T']
+    def _feature_based_on_arrangement_of_patterns(sequence:str, pal_limit=4) -> Tuple[float, ...]:
         sequence_length = len(sequence)
 
         # Most Repeat Pattern Count (MRP)
@@ -72,15 +97,19 @@ class MurugaiahFeatures:
         most_repeated_count = max(tetranucleotides_occurrences_dict.values()) # 1 feature
 
         # Palindrome Count (PC) & Palindrome Threshold (PT)
-        palindrome_count = 0 # 1 feature
-        palindrome_threshold = 0 # 1 feature
+        #palindrome_count = MurugaiahFeatures.count_palindrome_patterns(sequence, pal_limit) # 1 feature
+
+        # palindrome_count = 0 # 1 feature
+        # palindrome_threshold = 0 # 1 feature
+        # if limit is None:
+        #     limit = sequence_length
         
-        for start in range(sequence_length):
-            for end in range(start + 1, sequence_length):
-                subsequence = sequence[start:end]
-                if subsequence == subsequence[::-1]:
-                    palindrome_count += 1
-                    palindrome_threshold = max(palindrome_threshold, len(subsequence))
+        # for start in range(sequence_length):
+        #     for end in range(start + 1, sequence_length):
+        #         subsequence = sequence[start:end]
+        #         if subsequence == subsequence[::-1]:
+        #             palindrome_count += 1
+        #             palindrome_threshold = max(palindrome_threshold, len(subsequence))
 
         # Entropy
         bases_occurrences_dict = Counter(sequence)
@@ -107,7 +136,8 @@ class MurugaiahFeatures:
                         break
                     end += 3
 
-        f3 = (most_repeated_count, palindrome_count, palindrome_threshold, entropy, orf_count, orf_threshold)
+        f3 = (most_repeated_count, entropy, orf_count, orf_threshold)
+        # f3 = (most_repeated_count, palindrome_count, palindrome_threshold, entropy, orf_count, orf_threshold)
         return f3 # 6 features
 
     @staticmethod

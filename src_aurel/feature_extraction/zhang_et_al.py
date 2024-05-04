@@ -7,6 +7,7 @@ doi: http://dx.doi.org/10.1093/bioinformatics/btg041
 """
 import numpy as np
 from typing import Iterable
+from timebudget import timebudget
 
 class ZhangFeatures:
     def __init__(self):
@@ -16,6 +17,7 @@ class ZhangFeatures:
         features = [self.extract_single(seq=sequence, f=fourier, s=smooth) for sequence in sequences]
         return np.array(features)
 
+    @timebudget
     def extract_single(self, seq:str, f:bool=False, s:bool=False) -> np.ndarray:
         sequence_arr = np.array(list(seq))
 
