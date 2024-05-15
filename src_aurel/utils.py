@@ -11,7 +11,7 @@ def load_settings():
     Returns
         settings (dict): The settings dictionary
     """
-    with open("settings.json", 'r') as settings_file:
+    with open("src_aurel/settings.json", 'r') as settings_file:
         settings = json.load(settings_file)
 
     if 'created' not in settings:

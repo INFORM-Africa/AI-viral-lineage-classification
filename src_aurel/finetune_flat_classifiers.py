@@ -323,8 +323,19 @@ if __name__ == "__main__":
     }
 
     for name, features in features_dict.items():
+        print(f"Finetuning models for {name} features:")
+        
+        print("Naive Bayes")
         finetune_nb(features, y, name, n_trials=trials)
+
+        print("Random Forest")
         finetune_rf(features, y, name, n_trials=trials)
+
+        print("XGBoost")
         finetune_xgb(features, y, name, n_trials=trials)
+
+        print("LightGBM")
         finetune_lgbm(features, y, name, n_trials=trials)
+
+        print("CatBoost")
         finetune_cb(features, y, name, n_trials=trials)
