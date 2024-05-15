@@ -6,11 +6,11 @@ Computational and Structural Biotechnology Journal 21, 284–298, M.A.C., 2023.
 doi: https://doi.org/10.1016/j.csbj.2022.12.007
 """
 
+from concurrent.futures import ProcessPoolExecutor
 import itertools
 import collections
 import numpy as np
 from typing import Iterable
-from timebudget import timebudget
 
 class CoutinhoFeatures:
     def __init__(self, k:int=7, resolution:int=None):
@@ -23,10 +23,12 @@ class CoutinhoFeatures:
         self.kmers = [''.join(kmer) for kmer in itertools.product(['A', 'C', 'T', 'G'], repeat=k)]
     
     def extract(self, sequences:Iterable[str], b:int=8) -> np.ndarray:
-        features = [self.extract_single(seq=sequence, b=b) for sequence in sequences]
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(self.extract_single, seq, b) for seq in sequences]
+            
+        features = [f.result() for f in futures]
         return np.array(features)
 
-    @timebudget
     def extract_single(self, seq:str, b:int=8) -> np.ndarray:
         sub_seqs = [seq[i : i + self.k] for i in range(len(seq) - self.k + 1)]
         kmer_counts = collections.Counter(sub_seqs)

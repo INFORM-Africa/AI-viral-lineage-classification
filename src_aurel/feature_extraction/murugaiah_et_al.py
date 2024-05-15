@@ -10,25 +10,27 @@ from typing import Iterable, Tuple
 import itertools
 import math
 import numpy as np
-from timebudget import timebudget
+from concurrent.futures import ProcessPoolExecutor
 
 class MurugaiahFeatures:
     def __init__(self):
         pass
     
-    def extract(self, sequences:Iterable[str], fourier:bool=False) -> np.ndarray:
-        features = [self.extract_single(seq=sequence, f=fourier) for sequence in sequences]
+    def extract(self, sequences:Iterable[str]) -> np.array:
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(self.extract_single, seq) for seq in sequences]
+            
+        # Ensure the results are in the same order as the input
+        features = [f.result() for f in futures]
+        
         return np.array(features)
     
-    def extract_single(self, seq:str, f:bool=False) -> np.array:
+    def extract_single(self, seq:str) -> np.array:
         f1_features = self._feature_based_on_storage(seq) # 2 features
         f2_features = self._feature_based_on_bases_frequency(seq) # 85 features
-        f4_features = self._feature_based_on_composition_of_amino_acids(seq) # 27 features
         f3_features = self._feature_based_on_arrangement_of_patterns(seq) # 6 features
+        f4_features = self._feature_based_on_composition_of_amino_acids(seq) # 27 features
         features = np.concatenate((f1_features, f2_features, f3_features, f4_features)) # 120 features
-
-        if f:
-            features = np.fft.fft(features, axis=-1)
             
         return features
 
@@ -165,7 +167,7 @@ class MurugaiahFeatures:
             'TAT': 'Y', 'TAC': 'Y',
             'GTT': 'V', 'GTC': 'V', 'GTA': 'V', 'GTG': 'V'
         }
-        amino_acid_counts = {aa: 0 for aa in set(codon_to_amino_acid.values())} # 20 features
+        amino_acid_counts = {aa: 0 for aa in codon_to_amino_acid.values()} # 20 features
         for i in range(0, len(sequence), 3):
             codon = sequence[i:i+3]
             if codon in codon_to_amino_acid:

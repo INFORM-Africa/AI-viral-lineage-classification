@@ -13,12 +13,12 @@ class ZhangFeatures:
     def __init__(self):
         pass
     
-    def extract(self, sequences:Iterable[str], fourier:bool=False, smooth:bool=False) -> np.ndarray:
-        features = [self.extract_single(seq=sequence, f=fourier, s=smooth) for sequence in sequences]
+    def extract(self, sequences:Iterable[str], smooth:bool=False) -> np.ndarray:
+        features = [self.extract_single(seq=sequence, s=smooth) for sequence in sequences]
         return np.array(features)
 
     @timebudget
-    def extract_single(self, seq:str, f:bool=False, s:bool=False) -> np.ndarray:
+    def extract_single(self, seq:str, smooth:bool=False) -> np.ndarray:
         sequence_arr = np.array(list(seq))
 
         An = np.cumsum(sequence_arr == 'A')
@@ -32,11 +32,8 @@ class ZhangFeatures:
 
         features = np.column_stack([x_n, y_n, z_n])
 
-        if s:
+        if smooth:
             features = self._smooth_coordinates(features)
-
-        if f:
-            features = np.fft.fft(features, axis=-1)
 
         return features
 

@@ -10,13 +10,13 @@ class ReliefF:
     def init_weights(self, n_features):
         self.feature_importances_ = np.zeros(n_features)
 
-    def fit(self, X, y, n_select, is_discrete, n_iterations=10):
+    def _fit(self, X, y, n_select, is_discrete, n_iterations):
         self.init_weights(X.shape[1])
         subset_indices = np.random.choice(X.shape[0], self.n_instances, replace=False)
         X_subset = X[subset_indices]
         y_subset = y[subset_indices]
         classes = np.unique(y)
-        classes_probs = np.array([np.mean(y == c) for c in classes])
+        classes_probs = {c: (y_subset == c).sum() / self.n_instances for c in classes}
         classes = np.unique(y_subset)
 
         for _ in range(n_iterations):
@@ -45,11 +45,11 @@ class ReliefF:
             return (r == nearest_neighbors).astype(int).sum(axis=0) / denominator
         
         denominator = denominator * (np.max(nearest_neighbors, axis=0) - np.min(nearest_neighbors, axis=0))
-        return np.abs(r - nearest_neighbors).sum(axis=0)/ denominator
+        return np.abs(r - nearest_neighbors).sum(axis=0)/ (denominator + 1e-10)
 
     def transform(self, X):
         return X[:, self.selected_features_]
 
-    def fit_transform(self, X, y):
-        self.fit(X, y)
+    def fit_transform(self, X, y, n_select, is_discrete, n_iterations=10):
+        self._fit(X, y, n_select, is_discrete, n_iterations=n_iterations)
         return self.transform(X)

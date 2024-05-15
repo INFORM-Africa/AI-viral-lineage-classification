@@ -6,3 +6,4 @@ src/01_feature_extraction/reports/*
 __pycache__/
 src_aurel/data/
 src_aurel/*.png
+src_aurel/settings.json

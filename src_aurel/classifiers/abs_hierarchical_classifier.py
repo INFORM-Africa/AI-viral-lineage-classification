@@ -7,7 +7,7 @@ Available at: https://jmlr.org/papers/v24/21-1518.html.
 Shared code for all classifiers.
 """
 
-import abc
+from abc import abstractmethod, ABC
 import hashlib
 import logging
 import pickle
@@ -58,7 +58,7 @@ def make_leveled(y):
     return np.array(leveled_y)
 
 
-class HierarchicalClassifier(abc.ABC):
+class HierarchicalClassifier(ABC):
     """Abstract class for the local hierarchical classifiers.
 
     Offers mostly utility methods and common data initialization.
@@ -132,6 +132,23 @@ class HierarchicalClassifier(abc.ABC):
 
         # Delete unnecessary variables
         self._clean_up()
+    
+    @abstractmethod
+    def predict(self, X, return_uncertainty=False):
+        """
+        Predict classes for the given data.
+
+        Hierarchical labels are returned.
+
+        Parameters
+            X ({array-like, sparse matrix} of shape (n_samples, n_features)) : The input samples. Internally, its dtype will be converted
+                to ``dtype=np.float32``. If a sparse matrix is provided, it will be converted into a sparse ``csr_matrix``.
+            return_uncertainty (bool, default=False) : Whether to return the uncertainty of the prediction.
+        Returns
+            y (ndarray of shape (n_samples,) or (n_samples, n_outputs)) : The predicted classes.
+            uncertainties (ndarray of shape (n_samples,) or (n_samples, n_outputs)) : The uncertainty of the prediction.
+        """
+        pass
 
     def _pre_fit(self, X, y, sample_weight):
         # Check that X and y have correct shape
@@ -247,7 +264,7 @@ class HierarchicalClassifier(abc.ABC):
             # Create max_levels variable
             self.max_levels_ = self.y_.shape[1]
             rows, columns = self.y_.shape
-            self.logger_.info(f"Creating digraph from {rows} 2D labels")
+            if self.verbose > 1: self.logger_.info(f"Creating digraph from {rows} 2D labels")
             for row in range(rows):
                 for column in range(columns - 1):
                     parent = self.y_[row, column].split(self.separator_)[-1]
@@ -269,7 +286,7 @@ class HierarchicalClassifier(abc.ABC):
                 mapping[node] = '"{}"'.format(node.split(self.separator_)[-1])
             hierarchy = nx.relabel_nodes(self.hierarchy_, mapping, copy=True)
             # Export DAG to CSV file
-            self.logger_.info(f"Writing edge list to file {self.edge_list}")
+            if self.verbose > 1: self.logger_.info(f"Writing edge list to file {self.edge_list}")
             nx.write_edgelist(hierarchy, self.edge_list, delimiter=",")
 
     def _assert_digraph_is_dag(self):
@@ -298,7 +315,7 @@ class HierarchicalClassifier(abc.ABC):
     def _initialize_local_classifiers(self):
         # Create a deep copy of the local classifier specified
         # for each node in the hierarchy and save to attribute "classifier"
-        self.logger_.info("Initializing local classifiers")
+        if self.verbose > 0: self.logger_.info("Initializing local classifiers")
         if self.local_classifier is None:
             self.local_classifier_ = LogisticRegression()
         else:

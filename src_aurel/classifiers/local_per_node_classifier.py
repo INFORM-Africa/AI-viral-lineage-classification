@@ -125,7 +125,7 @@ class LocalClassifierPerNode(BaseEstimator, HierarchicalClassifier):
         # Return the classifier
         return self
 
-    def predict(self, X):
+    def predict(self, X, return_uncertainty=False):
         """
         Predict classes for the given data.
 
@@ -134,8 +134,10 @@ class LocalClassifierPerNode(BaseEstimator, HierarchicalClassifier):
         Parameters
             X ({array-like, sparse matrix} of shape (n_samples, n_features)) : The input samples. Internally, its dtype will be converted
                 to ``dtype=np.float32``. If a sparse matrix is provided, it will be converted into a sparse ``csr_matrix``.
+            return_uncertainty (bool, default=False) : If True, return the uncertainty of the predictions.
         Returns
             y (ndarray of shape (n_samples,) or (n_samples, n_outputs)) : The predicted classes.
+            uncertainty (ndarray of shape (n_samples,)) : The estimated uncertainty of the predictions.
         """
         # Check if fit has been called
         check_is_fitted(self)
@@ -146,8 +148,9 @@ class LocalClassifierPerNode(BaseEstimator, HierarchicalClassifier):
         else:
             X = np.array(X)
 
-        # Initialize array that holds predictions
+        # Initialize array that holds predictions and uncertainties
         y = np.empty((X.shape[0], self.max_levels_), dtype=self.dtype_)
+        uncertainties = np.zeros((X.shape[0],))
 
         # TODO: Add threshold to stop prediction halfway if need be
 
@@ -182,11 +185,18 @@ class LocalClassifierPerNode(BaseEstimator, HierarchicalClassifier):
                 prediction = np.array(prediction)
                 y[mask, level] = prediction
 
+                if return_uncertainty:
+                    probabilities = probabilities + 1e-10
+                    entropies = -np.sum(probabilities * np.log2(probabilities), axis=1)
+                    uncertainties[mask] = uncertainties[mask] + entropies
+
         y = self._convert_to_1d(y)
 
         self._remove_separator(y)
 
-        return y
+        assert y.shape[0] == uncertainties.shape[0], "Shapes do not match" 
+        return y, uncertainties if return_uncertainty else y
+
 
     def _initialize_binary_policy(self):
         if isinstance(self.binary_policy, str):
@@ -237,7 +247,7 @@ class LocalClassifierPerNode(BaseEstimator, HierarchicalClassifier):
                     f"Loaded trained model for local classifier {node.split(self.separator_)[-1]} from file {filename}"
                 )
                 return classifier
-        self.logger_.info(f"Training local classifier {node}")
+        if self.verbose > 0: self.logger_.info(f"Training local classifier {node}")
         X, y, sample_weight = self.binary_policy_.get_binary_examples(node)
         unique_y = np.unique(y)
         if len(unique_y) == 1 and self.replace_classifiers:

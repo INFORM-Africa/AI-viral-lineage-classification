@@ -1,19 +1,18 @@
 import itertools
 import numpy as np
 from typing import Iterable, Literal
-from timebudget import timebudget
+from concurrent.futures import ProcessPoolExecutor
 
 class ConventionalFeatures:
     def __init__(self):
         pass
     
-    def extract_binary_features(self, sequences:Iterable[str], fourier:bool=False) -> np.ndarray:
-        features = [self.extract_binary_features_single(sequence, fourier) for sequence in sequences]
+    def extract_binary_features(self, sequences:Iterable[str]) -> np.ndarray:
+        features = [self.extract_binary_features_single(sequence) for sequence in sequences]
         return np.stack(features)
 
     @staticmethod
-    @timebudget
-    def extract_binary_features_single(sequence:str, fourier:bool=False) -> np.ndarray:
+    def extract_binary_features_single(sequence:str) -> np.ndarray:
         
         sequence_arr = np.array(list(sequence))
 
@@ -25,19 +24,17 @@ class ConventionalFeatures:
         ])
         features = features.T
 
-        if fourier:
-            features = np.fft.fft(features, axis=-1)
-
-        ## TODO Check and adjust shape of features if necessary
         return features
 
-    def extract_kmers_features(self, sequences:Iterable[str], k:int, normalize:bool=False) -> np.ndarray:
-        features = [self.extract_kmers_features_single(sequence, k, normalize) for sequence in sequences]
+    def extract_kmers_features(self, sequences:Iterable[str], k:int, normalize:bool=True) -> np.ndarray:
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(self.extract_kmers_features_single, seq,  k, normalize) for seq in sequences]
+            
+        features = [f.result() for f in futures]
         return np.array(features)
 
     @staticmethod
-    @timebudget
-    def extract_kmers_features_single(sequence: str, k:int, normalize: bool=False) -> np.ndarray:
+    def extract_kmers_features_single(sequence: str, k:int, normalize: bool) -> np.ndarray:
         bases = ['A', 'C', 'T', 'G']
         kmers = [''.join(kmer) for kmer in itertools.product(bases, repeat=k)]
         kmers_dict = {kmer: 0 for kmer in kmers}
@@ -56,13 +53,15 @@ class ConventionalFeatures:
 
         return values 
     
-    def extract_fcgr_features(self, sequences:Iterable[str], resolution:Literal[64, 128, 256]=128, fourier:bool=False) -> np.ndarray:
-        features = [self.extract_fcgr_features_single(sequence, resolution, fourier) for sequence in sequences]
+    def extract_fcgr_features(self, sequences:Iterable[str], resolution:Literal[64, 128, 256]=128) -> np.ndarray:
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(self.extract_fcgr_features_single, seq, resolution) for seq in sequences]
+    
+        features = [f.result() for f in futures]       
         return np.array(features)
 
     @staticmethod
-    @timebudget
-    def extract_fcgr_features_single(sequence:str, resolution:Literal[64, 128, 256]=128, fourier:bool=False) -> np.ndarray:
+    def extract_fcgr_features_single(sequence:str, resolution:Literal[64, 128, 256]) -> np.ndarray:
         coordinates = {
             'A': (0, 0),
             'C': (0, 1),
@@ -84,8 +83,5 @@ class ConventionalFeatures:
 
             ix, iy = int(x * scale), int(y * scale)
             fcgr[iy, ix] = fcgr[iy, ix] + 1
-
-        if fourier:
-            fcgr = np.fft.fft2(fcgr)
 
         return fcgr

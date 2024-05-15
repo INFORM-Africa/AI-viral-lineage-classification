@@ -4,6 +4,5 @@
     "features_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/dataset/features/",
     "reports_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/reports/",
     "plots_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/plots/",
-    "optuna_trials": 100,
-    "created": true
+    "optuna_trials": 100
 }

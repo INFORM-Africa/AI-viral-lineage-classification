@@ -213,7 +213,7 @@ def _recall_macro(y_true: np.ndarray, y_pred: np.ndarray):
     return _compute_macro(y_true, y_pred, _recall_micro)
 
 
-def hf1_score(y_true: np.ndarray, y_pred: np.ndarray, average: str = "micro"):
+def h_f1_score(y_true: np.ndarray, y_pred: np.ndarray, average: str = "micro"):
     r"""
     Compute hierarchical f-score.
 
