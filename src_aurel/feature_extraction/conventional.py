@@ -1,5 +1,6 @@
 import itertools
 import numpy as np
+from tqdm import tqdm
 from typing import Iterable, Literal
 from concurrent.futures import ProcessPoolExecutor
 
@@ -34,7 +35,7 @@ class ConventionalFeatures:
         return np.array(features)
 
     @staticmethod
-    def extract_kmers_features_single(sequence: str, k:int, normalize: bool) -> np.ndarray:
+    def extract_kmers_features_single(sequence: str, k:int, normalize: bool, bar=None) -> np.ndarray:
         bases = ['A', 'C', 'T', 'G']
         kmers = [''.join(kmer) for kmer in itertools.product(bases, repeat=k)]
         kmers_dict = {kmer: 0 for kmer in kmers}
@@ -45,11 +46,13 @@ class ConventionalFeatures:
             if 'N' not in kmer:
                 kmers_dict[kmer] += 1
 
-        # keys = np.array([kmer for kmer in kmers_dict])
         values = np.array([kmers_dict[kmer] for kmer in kmers])
 
         if normalize:
             values = values / sum(values)
+
+        if bar is not None:
+            bar.update(1)
 
         return values 
     

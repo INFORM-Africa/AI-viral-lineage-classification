@@ -1,3 +1,4 @@
+import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.naive_bayes import GaussianNB
 from xgboost import XGBClassifier
@@ -15,7 +16,7 @@ def get_timestamp():
     now = datetime.now()
     return int(now.timestamp())
 
-def finetune_rf(features, labels, features_name, test_size=0.2, n_trials=100):
+def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_rf_{features_name}_{timestamp}.txt')
     file = open(reports_filename, 'a')
@@ -71,7 +72,7 @@ def finetune_rf(features, labels, features_name, test_size=0.2, n_trials=100):
     print("Logs saved to", reports_filename)
 
 
-def finetune_xgb(features, labels, features_name, test_size=0.2, n_trials=100):
+def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_xgb_{features_name}_{timestamp}.txt')
     file = open(reports_filename, 'a')
@@ -82,19 +83,20 @@ def finetune_xgb(features, labels, features_name, test_size=0.2, n_trials=100):
     
     file.write("Hyperparameters and search space\n")
     file.write("\tn_estimators: 50-500\n")
+    file.write("\tlearning_rate: 1e-3-0.1\n")
     file.write("\tmax_depth: 1-20\n")
     file.write("\tsubsample: 0.5-1.0\n")
-    file.write("\tcolsample_bytree: 0.5-1.0\n")
+    # file.write("\tcolsample_bytree: 0.5-1.0\n")
     file.write("\tgamma: 1e-8-1.0\n")
     file.write("\tmin_child_weight: 1-10\n")
 
     def objective(trial):
-        learning_rate = trial.suggest_loguniform('learning_rate', 1e-3, 0.1)
+        learning_rate = trial.suggest_float('learning_rate', 1e-3, 0.1, log=True)
         n_estimators = trial.suggest_int('n_estimators', 50, 500)
         max_depth = trial.suggest_int('max_depth', 1, 20)
-        subsample = trial.suggest_uniform('subsample', 0.5, 1.0)
-        colsample_bytree = trial.suggest_uniform('colsample_bytree', 0.5, 1.0)
-        gamma = trial.suggest_loguniform('gamma', 1e-8, 1.0)
+        subsample = trial.suggest_float('subsample', 0.5, 1.0)
+        # colsample_bytree = trial.suggest_float('colsample_bytree', 0.5, 1.0)
+        gamma = trial.suggest_float('gamma', 1e-8, 1.0, log=True)
         min_child_weight = trial.suggest_int('min_child_weight', 1, 10)
 
         xgb = XGBClassifier(
@@ -102,18 +104,20 @@ def finetune_xgb(features, labels, features_name, test_size=0.2, n_trials=100):
             n_estimators=n_estimators,
             max_depth=max_depth,
             subsample=subsample,
-            colsample_bytree=colsample_bytree,
+            # colsample_bytree=colsample_bytree,
             gamma=gamma,
             min_child_weight=min_child_weight,
             objective='multi:softmax',
-            eval_metric='mlogloss',
             random_state=42,
-            verbosity=0,
+            verbosity=3,
             n_jobs=-1,
         )
 
         # Fit the model on the training data
-        xgb.fit(X_train, y_train, eval_set=[(X_test, y_test)], early_stopping_rounds=10, verbose=False)
+        mask = np.isin(y_test, y_train)
+        y_valid = y_test[mask]
+        X_valid = X_test[mask]
+        xgb.fit(X_train, y_train, eval_set=[(X_valid, y_valid)], early_stopping_rounds=10, verbose=False)
 
         y_pred = xgb.predict(X_test)
         accuracy = metrics.accuracy_score(y_test, y_pred)
@@ -131,7 +135,7 @@ def finetune_xgb(features, labels, features_name, test_size=0.2, n_trials=100):
     print(f"Finetuning completed with {study.best_value} accuracy")
     print("Logs saved to", reports_filename)
     
-def finetune_lgbm(features, labels, features_name, test_size=0.2, n_trials=100):
+def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_lgbm_{features_name}_{timestamp}.txt')
     file = open(reports_filename, 'a')
@@ -145,17 +149,17 @@ def finetune_lgbm(features, labels, features_name, test_size=0.2, n_trials=100):
     file.write("\tn_estimators: 50-500\n")
     file.write("\tmax_depth: 1-20\n")
     file.write("\tsubsample: 0.5-1.0\n")
-    file.write("\tcolsample_bytree: 0.5-1.0\n")
+    # file.write("\tcolsample_bytree: 0.5-1.0\n")
     file.write("\tmin_child_samples: 1-20\n")
     file.write("\tnum_leaves: 20-50\n")
     file.write("\tboosting_type: gbdt, dart, rf\n")
 
     def objective(trial):
-        learning_rate = trial.suggest_loguniform('learning_rate', 1e-3, 0.1)
+        learning_rate = trial.suggest_float('learning_rate', 1e-3, 0.1, log=True)
         n_estimators = trial.suggest_int('n_estimators', 50, 500)
         max_depth = trial.suggest_int('max_depth', 1, 20)
-        subsample = trial.suggest_uniform('subsample', 0.5, 1.0)
-        colsample_bytree = trial.suggest_uniform('colsample_bytree', 0.5, 1.0)
+        subsample = trial.suggest_float('subsample', 0.5, 1.0)
+        # colsample_bytree = trial.suggest_float('colsample_bytree', 0.5, 1.0)
         min_child_samples = trial.suggest_int('min_child_samples', 1, 20)
         num_leaves = trial.suggest_int('num_leaves', 20, 50)
         boosting_type = trial.suggest_categorical('boosting_type', ['gbdt', 'dart', 'rf'])
@@ -167,7 +171,7 @@ def finetune_lgbm(features, labels, features_name, test_size=0.2, n_trials=100):
             n_estimators=n_estimators,
             max_depth=max_depth,
             subsample=subsample,
-            colsample_bytree=colsample_bytree,
+            # colsample_bytree=colsample_bytree,
             min_child_samples=min_child_samples,
             num_leaves=num_leaves,
             objective='multiclass',
@@ -176,7 +180,10 @@ def finetune_lgbm(features, labels, features_name, test_size=0.2, n_trials=100):
         )
 
         # Fit the model on the training data
-        lgbm.fit(X_train, y_train, eval_set=[(X_test, y_test)], early_stopping_rounds=10, verbose=False)
+        mask = np.isin(y_test, y_train)
+        y_valid = y_test[mask]
+        X_valid = X_test[mask]
+        lgbm.fit(X_train, y_train, eval_set=[(X_valid, y_valid)])
 
         # Calculate the validation accuracy
         y_pred = lgbm.predict(X_test)
@@ -195,7 +202,7 @@ def finetune_lgbm(features, labels, features_name, test_size=0.2, n_trials=100):
     print(f"Finetuning completed with {study.best_value} accuracy")
     print("Logs saved to", reports_filename)
     
-def finetune_cb(features, labels, features_name, test_size=0.2, n_trials=100):
+def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_cb_{features_name}_{timestamp}.txt')
     file = open(reports_filename, 'a')
@@ -212,9 +219,9 @@ def finetune_cb(features, labels, features_name, test_size=0.2, n_trials=100):
 
     def objective(trial):
         iterations = trial.suggest_int('iterations', 100, 1000)
-        learning_rate = trial.suggest_loguniform('learning_rate', 0.001, 0.1)
+        learning_rate = trial.suggest_float('learning_rate', 0.001, 0.1, log=True)
         depth = trial.suggest_int('depth', 4, 10)
-        l2_leaf_reg = trial.suggest_loguniform('l2_leaf_reg', 1e-2, 10.0)
+        l2_leaf_reg = trial.suggest_float('l2_leaf_reg', 1e-2, 10.0, log=True)
 
         # Initialize the CatBoost classifier with the hyperparameters
         cb = CatBoostClassifier(
@@ -227,7 +234,10 @@ def finetune_cb(features, labels, features_name, test_size=0.2, n_trials=100):
         )
 
         # Fit the model on the training data
-        cb.fit(X_train, y_train, eval_set=(X_test, y_test), early_stopping_rounds=10, verbose=False)
+        mask = np.isin(y_test, y_train)
+        y_valid = y_test[mask]
+        X_valid = X_test[mask]
+        cb.fit(X_train, y_train, eval_set=(X_valid, y_valid), early_stopping_rounds=10, verbose=False)
 
         # Calculate the validation accuracy
         y_pred = cb.predict(X_test)
@@ -247,7 +257,7 @@ def finetune_cb(features, labels, features_name, test_size=0.2, n_trials=100):
     print("Logs saved to", reports_filename)
     
 
-def finetune_nb(features, labels, features_name, test_size=0.2, n_trials=100):
+def finetune_nb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_nb_{features_name}_{timestamp}.txt')
     file = open(reports_filename, 'a')
@@ -326,16 +336,16 @@ if __name__ == "__main__":
         print(f"Finetuning models for {name} features:")
         
         print("Naive Bayes")
-        finetune_nb(features, y, name, n_trials=trials)
+        finetune_nb(features, y, name, n_trials=trials, reports_dir=reports_dir)
 
         print("Random Forest")
-        finetune_rf(features, y, name, n_trials=trials)
+        finetune_rf(features, y, name, n_trials=trials, reports_dir=reports_dir)
 
         print("XGBoost")
-        finetune_xgb(features, y, name, n_trials=trials)
+        finetune_xgb(features, y, name, n_trials=trials, reports_dir=reports_dir)
 
         print("LightGBM")
-        finetune_lgbm(features, y, name, n_trials=trials)
+        finetune_lgbm(features, y, name, n_trials=trials, reports_dir=reports_dir)
 
         print("CatBoost")
-        finetune_cb(features, y, name, n_trials=trials)
+        finetune_cb(features, y, name, n_trials=trials, reports_dir=reports_dir)

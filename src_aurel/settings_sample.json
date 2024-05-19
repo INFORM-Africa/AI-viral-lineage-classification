@@ -1,6 +1,7 @@
 {
     "raw_data_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/dataset/raw/",
     "cleaned_data_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/dataset/cleaned/",
+    "dataset_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/dataset/",
     "features_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/dataset/features/",
     "reports_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/reports/",
     "plots_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/plots/",

@@ -7,3 +7,4 @@ __pycache__/
 src_aurel/data/
 src_aurel/*.png
 src_aurel/settings.json
+src_aurel/settings_vm.json

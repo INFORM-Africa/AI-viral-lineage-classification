@@ -1,30 +1,41 @@
+import json, os
+import pandas as pd
+import numpy as np
+from sklearn import metrics
+from typing import Tuple
 import matplotlib.pyplot as plt
 import seaborn as sns
-from typing import Tuple
-from sklearn import metrics
-import numpy as np
-import json, os
+import pyarrow as pa
+import pyarrow.parquet as pq
 
-def load_settings():
+def load_settings(path: str = "settings.json"):
     """
     This function reads the settings from the settings.json file.
     Returns
         settings (dict): The settings dictionary
     """
-    with open("src_aurel/settings.json", 'r') as settings_file:
+    with open(path, 'r') as settings_file:
         settings = json.load(settings_file)
-
-    if 'created' not in settings:
-        for _, path in settings.items():
-            if not os.path.exists(path):
-                os.makedirs(path)
-
-        settings['created'] = True
-
-        with open("settings.json", 'w') as settings_file:
-            json.dump(settings, settings_file, indent=4)
         
     return settings
+
+def load_feature_params(path: str = "feature_params.json"):
+    with open(path, 'r') as params_file:
+        params = json.load(params_file)
+        
+    return params
+
+def dump_parquet(data, path):
+    """
+    This function saves the data to a parquet file.
+    Parameters
+        data (pd.DataFrame): The data to be saved
+        path (str): The path to save the data
+    Returns
+        None
+    """
+    table = pa.table(pd.DataFrame(data))
+    pq.write_table(table, path)
 
 
 def save_performance_plots(model_name: str, size: Tuple[int, int], conf_mat, fpr, tpr, roc_auc):
