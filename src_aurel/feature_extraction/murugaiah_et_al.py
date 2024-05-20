@@ -16,7 +16,7 @@ class MurugaiahFeatures:
     def __init__(self):
         pass
     
-    def extract(self, sequences:Iterable[str]) -> np.array:
+    def extract_features(self, sequences:Iterable[str]) -> np.array:
         with ProcessPoolExecutor() as executor:
             futures = [executor.submit(self.extract_single, seq) for seq in sequences]
             

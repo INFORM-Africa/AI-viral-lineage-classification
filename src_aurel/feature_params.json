@@ -1,9 +1,9 @@
 {
     "kmer": {
-        "k": [5, 6, 7, 8, 9, 10],
+        "k": [5, 6, 7, 8],
         "normalize": true
     },
-    "fgcr":{
+    "fcgr":{
         "resolution": [128, 64]
     },
     "murugaiah":{}

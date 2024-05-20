@@ -35,7 +35,7 @@ def extract_and_dump_features(kind:str, sequences, output_dir, *args) -> None:
         if should_create(os.path.join(output_dir, filename)):
             features = ConventionalFeatures().extract_kmers_features(sequences, *args)
             utils.dump_parquet(features, os.path.join(output_dir, filename))
-            logging.info(f"Features saved to {str(output_dir)}/{filename}")
+            logging.info(f"Features saved to {str(output_dir)}{filename}")
         else:
             logging.info(f"File {filename} already exists, skipping...")
 
@@ -45,7 +45,7 @@ def extract_and_dump_features(kind:str, sequences, output_dir, *args) -> None:
             features = ConventionalFeatures().extract_fcgr_features(sequences, *args)
             features = features.reshape((len(sequences), -1))
             utils.dump_parquet(features, os.path.join(output_dir, filename))
-            logging.info(f"Features saved to {str(output_dir)}/{filename}")
+            logging.info(f"Features saved to {str(output_dir)}{filename}")
         else:
             logging.info(f"File {filename} already exists, skipping...")
         
@@ -54,7 +54,7 @@ def extract_and_dump_features(kind:str, sequences, output_dir, *args) -> None:
         if should_create(os.path.join(output_dir, filename)):
             features = MurugaiahFeatures().extract_features(sequences, *args)
             utils.dump_parquet(features, os.path.join(output_dir, filename))
-            logging.info(f"Features saved to {str(output_dir)}/{filename}")
+            logging.info(f"Features saved to {str(output_dir)}{filename}")
         else:
             logging.info(f"File {filename} already exists, skipping...")
     

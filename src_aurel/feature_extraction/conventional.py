@@ -2,7 +2,7 @@ import itertools
 import numpy as np
 from tqdm import tqdm
 from typing import Iterable, Literal
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 class ConventionalFeatures:
     def __init__(self):
@@ -32,6 +32,20 @@ class ConventionalFeatures:
             futures = [executor.submit(self.extract_kmers_features_single, seq,  k, normalize) for seq in sequences]
             
         features = [f.result() for f in futures]
+        return np.array(features)
+    
+    def extract_kmers_features_(self, sequences:Iterable[str], k:int, normalize:bool=True) -> np.ndarray:
+        pbar = tqdm(total=len(sequences))
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(self.extract_kmers_features_single, seq,  k, normalize) for seq in sequences]
+            
+        features = []
+        for future in futures:
+            features.append(future.result())
+            pbar.update(1)
+        
+        pbar.close()  # Close the progress bar
+
         return np.array(features)
 
     @staticmethod

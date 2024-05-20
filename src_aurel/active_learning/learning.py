@@ -1,48 +1,57 @@
+from datetime import timedelta
 import numpy as np
+import pandas as pd
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.exceptions import NotFittedError
+import logging
 
 class ActiveLearning(BaseEstimator, ClassifierMixin):
 
     def __init__(self, base_estimator, budget, query_strategy='least_confident'):
         self.base_estimator = base_estimator
-        self.budget = budget
         self.query_strategy = query_strategy
+        self.budget = budget
         self.base_estimator_ = None
 
-    def fit(self, X, y, initial_pool_size=None, max_iter=1000):
-        if initial_pool_size is None:
-            initial_pool_size = int(len(X) * 0.1)  # Default to 10% of the data
+    def fit(self, X, y, dates, initial_date:str, timestep:int):
+        assert len(X) == len(y), "X and y must have the same length"
+        assert len(X) == len(dates), "X and dates must have the same length"
+        assert timestep > 0, "timestep must be greater than 0"
 
-        # Randomly select the initial labeled pool
-        indices = np.random.choice(len(X), size=initial_pool_size, replace=False)
-        X_labeled, y_labeled = X[indices], y[indices]
-        X_pool, y_pool = np.delete(X, indices, axis=0), np.delete(y, indices)
+        reported_lineages = {'lineage': [], 'date': []}
+
+        # Convert the initial date to a datetime object
+        current_date = pd.to_datetime(initial_date)
+        max_date = dates.max()
+        timestep = timedelta(days=timestep)
         t = 0
 
-        while len(X_labeled) < self.budget and t < max_iter:
+        while current_date < max_date:
+            end_date = current_date + timestep
+            training_set_mask = dates <= current_date
+            testing_set_mask = (dates > current_date) & (dates <= end_date)
+
+            X_labeled, y_labeled = X[training_set_mask], y[training_set_mask]
+            X_window, y_window = X[testing_set_mask], y[testing_set_mask]
+
             self.base_estimator_ = self.base_estimator.fit(X_labeled, y_labeled)
 
-            # Query the most uncertain instances from the pool
-            X_query = self.query(X_pool)
-            y_query = np.array([int(input(f"Enter the label for instance {i}: ")) for i in range(len(X_query))])
+            # Query the most uncertain instances from the samples in the window
+            most_uncertain_indices = self.find_most_uncertain_samples(X_window)
 
-            # Add the queried instances to the labeled pool
-            X_labeled = np.concatenate([X_labeled, X_query])
-            y_labeled = np.concatenate([y_labeled, y_query])
-
-            # Remove the queried instances from the pool
-            query_indices = np.array([np.where((X_pool == x).all(axis=1))[0][0] for x in X_query])
-            X_pool = np.delete(X_pool, query_indices, axis=0)
-            y_pool = np.delete(y_pool, query_indices)
+            # Report the most uncertain instances
+            for indice in most_uncertain_indices:
+                reported_lineages['lineage'].append(y_window[indice])
+                reported_lineages['date'].append(current_date)
 
             t += 1
+            current_date = end_date
 
         return self
 
-    def query(self, X_pool):
+    def find_most_uncertain_samples(self, X_pool):
         if self.base_estimator_ is None:
-            raise NotFittedError("This UncertaintySamplingActiveLearning instance is not fitted yet. Call 'fit' first.")
+            raise NotFittedError("This ActiveLearning instance is not fitted yet. Call 'fit' first.")
 
         if self.query_strategy == 'least_confident':
             uncertainties = self._least_confident(X_pool)
@@ -57,7 +66,14 @@ class ActiveLearning(BaseEstimator, ClassifierMixin):
         n_queries = min(self.budget, len(X_pool))
         query_indices = sorted_indices[:n_queries]
 
-        return X_pool[query_indices]
+        return query_indices
+    
+    def _log_uncertain_samples(self, X_pool, uncertainties):
+        sorted_indices = np.argsort(uncertainties)[::-1]
+        n_queries = min(self.budget, len(X_pool))
+        query_indices = sorted_indices[:n_queries]
+
+        return query_indices
 
     def _least_confident(self, X):
         """
