@@ -2,6 +2,7 @@ import os, re, glob
 import pandas as pd
 from Bio import SeqIO
 from .prepro import remove_ambiguous_bases
+import numpy as np
 
 
 def extract_metadata(dataset_path):
@@ -89,3 +90,20 @@ def remove_consensus_call_sequences(sequences_df):
     consensus_indexes = sequences_df[sequences_df['lineage'].str.contains('consensus call')].index
     sequences_df.drop(consensus_indexes, inplace=True)
     return sequences_df
+
+def get_hierarchy(lineage:str):
+    parts = lineage.split('.')
+    hierarchy = []
+    
+    for i in range(1, len(parts) + 1):
+        hierarchy.append('.'.join(parts[:i]))
+    
+    return hierarchy
+
+def normalize_hierarchies(hierarchy_labels):
+    max_length = max(len(arr) for arr in hierarchy_labels)
+    normalized_array = np.array([
+        np.pad(array=arr, pad_width=(0, max_length - len(arr)), constant_values='') for arr in hierarchy_labels
+    ])
+    
+    return normalized_array

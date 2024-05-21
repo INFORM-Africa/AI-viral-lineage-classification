@@ -13,6 +13,7 @@ from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 
+
 def get_timestamp():
     now = datetime.now()
     return int(now.timestamp())
@@ -20,11 +21,7 @@ def get_timestamp():
 def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_rf_{features_name}_{timestamp}.txt')
-    file = open(reports_filename, 'a')
-    
-    file.write(f"{features_name} features - {features.shape}\n")
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
-    file.write(f"X_train shape: {X_train.shape}, X_test shape: {X_test.shape}, y_train shape: {y_train.shape}, y_test shape: {y_test.shape}\n")
 
     def objective(trial):
         # Define the search space for hyperparameters
@@ -58,6 +55,7 @@ def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_t
     study = optuna.create_study(direction='maximize')
     study.optimize(objective, n_trials=n_trials)
 
+    file = open(reports_filename, 'a')
     file.write(f"Best hyperparameters: {str(study.best_params)}\n")
     file.write(f"Best accuracy: {str(study.best_value)}\n")
     file.close()
@@ -69,11 +67,7 @@ def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_t
 def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_xgb_{features_name}_{timestamp}.txt')
-    file = open(reports_filename, 'a')
-    
-    file.write(f"{features_name} features - {features.shape}\n")
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
-    file.write(f"X_train shape: {X_train.shape}, X_test shape: {X_test.shape}, y_train shape: {y_train.shape}, y_test shape: {y_test.shape}\n")
 
     def objective(trial):
         gamma = trial.suggest_float('gamma', 1e-8, 1.0, log=True)
@@ -96,9 +90,15 @@ def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_
             device = "cuda",
         )
 
-        xgb.fit(X_train, y_train, verbose=False)
+        evalset = [(X_train, y_train), (X_test,y_test)]
+        xgb.fit(X_train, y_train, verbose=False, eval_set=evalset, eval_metric='logloss', early_stopping_rounds=10)
         y_pred = xgb.predict(X_test)
         accuracy = metrics.accuracy_score(y_test, y_pred)
+
+        # results = model.evals_result()
+        # # plot learning curves
+        # pyplot.plot(results['validation_0']['logloss'], label='train')
+        # pyplot.plot(results['validation_1']['logloss'], label='test')
 
         return accuracy
     
@@ -106,6 +106,7 @@ def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_
     study = optuna.create_study(direction='maximize')
     study.optimize(objective, n_trials=n_trials)
 
+    file = open(reports_filename, 'a')
     file.write(f"Best hyperparameters: {str(study.best_params)}\n")
     file.write(f"Best accuracy: {str(study.best_value)}\n")
     file.close()
@@ -115,12 +116,8 @@ def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_
     
 def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
-    reports_filename = os.path.join(reports_dir, f'flat_lgbm_{features_name}_{timestamp}.txt')
-    file = open(reports_filename, 'a')
-    
-    file.write(f"{features_name} features - {features.shape}\n")
+    reports_filename = os.path.join(reports_dir, f'flat_lgbm_{features_name}_{timestamp}.txt')    
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
-    file.write(f"X_train shape: {X_train.shape}, X_test shape: {X_test.shape}, y_train shape: {y_train.shape}, y_test shape: {y_test.shape}\n")
 
     def objective(trial):
         learning_rate = trial.suggest_float('learning_rate', 1e-3, 0.1, log=True)
@@ -152,6 +149,7 @@ def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n
     study = optuna.create_study(direction='maximize')
     study.optimize(objective, n_trials=n_trials)
 
+    file = open(reports_filename, 'a')
     file.write(f"Best hyperparameters: {str(study.best_params)}\n")
     file.write(f"Best accuracy: {str(study.best_value)}\n")
     file.close()
@@ -162,12 +160,8 @@ def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n
 def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_cb_{features_name}_{timestamp}.txt')
-    file = open(reports_filename, 'a')
-    
-    file.write(f"{features_name} features - {features.shape}\n")
     X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
-    file.write(f"X_train shape: {X_train.shape}, X_test shape: {X_test.shape}, y_train shape: {y_train.shape}, y_test shape: {y_test.shape}\n")
-
+    
     def objective(trial):
         bagging_temperature = trial.suggest_float('bagging_temperature', 0, 1.0)
         depth = trial.suggest_int('depth', 1, 10)
@@ -198,6 +192,7 @@ def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_t
     study = optuna.create_study(direction='maximize')
     study.optimize(objective, n_trials=n_trials)
 
+    file = open(reports_filename, 'a')
     file.write(f"Best hyperparameters: {str(study.best_params)}\n")
     file.write(f"Best accuracy: {str(study.best_value)}\n")
     file.close()
@@ -206,19 +201,19 @@ def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_t
     logging.info(f"Logs saved to {reports_filename}")
 
 
-def finetune_model_with_features(model:str, X, y, feature:str, n_trials:int, reports_dir:str):
+def finetune_model_with_features(model:str, X, y, feature:str, n_trials, reports_dir:str):
     if model == 'rf':
         logging.info(f"Finetuning Random Forest with {feature} features")
-        finetune_rf(X, y, feature, reports_dir, n_trials=n_trials)
+        finetune_rf(X, y, feature, reports_dir, n_trials=n_trials["rf"])
     elif model == 'xgb':
         logging.info(f"Finetuning XGBoost with {feature} features")
-        finetune_xgb(X, y, feature, reports_dir, n_trials=n_trials)
+        finetune_xgb(X, y, feature, reports_dir, n_trials=n_trials["xgb"])
     elif model == 'lgbm':
         logging.info(f"Finetuning LightGBM with {feature} features")
-        finetune_lgbm(X, y, feature, reports_dir, n_trials=n_trials)
+        finetune_lgbm(X, y, feature, reports_dir, n_trials=n_trials["lgbm"])
     elif model == 'cb':
         logging.info(f"Finetuning CatBoost with {feature} features")
-        finetune_cb(X, y, feature, reports_dir, n_trials=n_trials)
+        finetune_cb(X, y, feature, reports_dir, n_trials=n_trials["cb"])
     else:
         raise ValueError(f"Invalid model: {model}")
 
@@ -237,10 +232,14 @@ if __name__ == "__main__":
     n_trials = settings["optuna_trials"]
     fine_tune_models = settings["fine_tune_models"]
 
+    if "fine_tune_completed" in settings:
+        fine_tune_completed = settings["fine_tune_completed"]
+    else:
+        fine_tune_completed = []
+
     logging.info(f"Loading labels file flat_labels.parquet")
     le = LabelEncoder()
-    y_table = pq.read_table(os.path.join(cleaned_data_dir, "flat_labels.parquet"))
-    y = y_table.to_pandas().to_numpy()
+    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "flat_labels.parquet"))
     y = le.fit_transform(y.flatten())
 
     for model in fine_tune_models:
@@ -251,48 +250,70 @@ if __name__ == "__main__":
             if key == 'kmer':
                 ks = config['k']
                 for k in ks:
-                    logging.info(f"Loading features file kmer_{k}_features.parquet")
-                    features_path = os.path.join(features_dir, f"kmer_{k}_features.parquet")
-                    X_table = pq.read_table(features_path)
-                    X = X_table.to_pandas().to_numpy()
-                    finetune_model_with_features(
-                        model=model, 
-                        X=X, 
-                        y=y, 
-                        feature=f"kmer_{k}", 
-                        n_trials=n_trials, 
-                        reports_dir=reports_dir
-                    )
+                    fine_tune_key = f"{model}::kmer_{k}"
+                    if fine_tune_key not in fine_tune_completed:
+                        logging.info(f"Loading features file kmer_{k}_features.parquet")
+                        features_path = os.path.join(features_dir, f"kmer_{k}_features.parquet")
+                        X = utils.read_parquet_to_np(features_path)
+                        finetune_model_with_features(
+                            model=model, 
+                            X=X, 
+                            y=y, 
+                            feature=f"kmer_{k}", 
+                            n_trials=n_trials, 
+                            reports_dir=reports_dir
+                        )
+                        fine_tune_completed.append(fine_tune_key)
+                        settings["fine_tune_completed"] = fine_tune_completed
+                        utils.save_settings(settings, path="src_aurel/settings.json")
+                        logging.info(f"Fine tuned models updated with {fine_tune_key}")
+                    else:
+                        logging.info(f"Skipping {fine_tune_key} as it is already completed")
                     
             elif key == 'fcgr':
                 ress = config['resolution']
                 for res in ress:
-                    logging.info(f"Loading features file fcgr_{res}_features.parquet")
-                    features_path = os.path.join(features_dir, f"fcgr_{res}_features.parquet")
-                    X_table = pq.read_table(features_path)
-                    X = X_table.to_pandas().to_numpy()
+                    fine_tune_key = f"{model}::fcgr_{res}"
+                    if fine_tune_key not in fine_tune_completed:
+                        logging.info(f"Loading features file fcgr_{res}_features.parquet")
+                        features_path = os.path.join(features_dir, f"fcgr_{res}_features.parquet")
+                        X = utils.read_parquet_to_np(features_path)
+                        finetune_model_with_features(
+                            model=model, 
+                            X=X, 
+                            y=y, 
+                            feature=f"fcgr_{res}", 
+                            n_trials=n_trials, 
+                            reports_dir=reports_dir
+                        )
+
+                        fine_tune_completed.append(fine_tune_key)
+                        settings["fine_tune_completed"] = fine_tune_completed
+                        utils.save_settings(settings, path="src_aurel/settings.json")
+                        logging.info(f"Fine tuned models updated with {fine_tune_key}")
+                    else:
+                        logging.info(f"Skipping {fine_tune_key} as it is already completed")
+                    
+            elif key == 'murugaiah':
+                fine_tune_key = f"{model}::murugaiah"
+                if fine_tune_key not in fine_tune_completed:
+                    logging.info(f"Loading features file murugaiah_features.parquet")
+                    features_path = os.path.join(features_dir, f"murugaiah_features.parquet")
+                    X = utils.read_parquet_to_np(features_path)
                     finetune_model_with_features(
                         model=model, 
-                        X=X, 
+                        X=X,
                         y=y, 
-                        feature=f"fcgr_{res}", 
+                        feature=f"murugaiah", 
                         n_trials=n_trials, 
                         reports_dir=reports_dir
                     )
-                    
-            elif key == 'murugaiah':
-                logging.info(f"Loading features file murugaiah_features.parquet")
-                features_path = os.path.join(features_dir, f"murugaiah_features.parquet")
-                X_table = pq.read_table(features_path)
-                X = X_table.to_pandas().to_numpy()
-                finetune_model_with_features(
-                    model=model, 
-                    X=X, 
-                    y=y, 
-                    feature=f"murugaiah", 
-                    n_trials=n_trials, 
-                    reports_dir=reports_dir
-                )
+                    fine_tune_completed.append(fine_tune_key)
+                    settings["fine_tune_completed"] = fine_tune_completed
+                    utils.save_settings(settings, path="src_aurel/settings.json")
+                    logging.info(f"Fine tuned models updated with {fine_tune_key}")
+                else:
+                    logging.info(f"Skipping {fine_tune_key} as it is already completed")
                 
             else:
                 raise ValueError(f"Invalid key: {key}")

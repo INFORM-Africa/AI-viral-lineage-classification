@@ -6,6 +6,7 @@ from .abs_hierarchical_classifier import HierarchicalClassifier
 from .datasets import datasets 
 # from lagrassa_et_al import CenterLossNN
 from .metrics import metrics
+from .plots import plots
 
 __all__ = [
     "LocalClassifierPerLevel",
@@ -16,4 +17,5 @@ __all__ = [
     "Explainer",
     "datasets",
     "metrics",
+    "plots",
 ]

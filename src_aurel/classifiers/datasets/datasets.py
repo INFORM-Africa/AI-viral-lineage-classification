@@ -69,6 +69,9 @@ def load_platypus(test_size=0.3, random_state=42):
     dataset_name = "platypus_diseases.csv"
     cached_file_path = os.path.join(CACHE_DIR, dataset_name)
 
+    logger.info("Downloading platypus diseases dataset..")
+    print("Downloading platypus diseases dataset..")
+
     # Check if the file exists in the cache
     if not os.path.exists(cached_file_path):
         try:

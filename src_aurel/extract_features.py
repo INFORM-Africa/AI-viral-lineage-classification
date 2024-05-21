@@ -3,7 +3,9 @@ import requests, zipfile, io, os
 import pandas as pd
 from feature_extraction import ConventionalFeatures, MurugaiahFeatures
 import utils
-from preprocessing.read_data import extract_metadata, extract_sequences, clean_sequences, clean_collection_dates, merge_dfs, remove_consensus_call_sequences
+from preprocessing.read_data import extract_metadata, extract_sequences, remove_consensus_call_sequences
+from preprocessing.read_data import clean_sequences, clean_collection_dates, get_hierarchy, merge_dfs
+
 
 def download_and_save_data(url: str, output_dir:str) -> None:
     r = requests.get(url)
@@ -23,11 +25,12 @@ def clean_and_dump_data(input_dir, dump_dir) -> None:
     
     data = merge_dfs(metadata, sequences)
     data = remove_consensus_call_sequences(data)
+    data["lineage_hierarchy"] = data["lineage"].apply(get_hierarchy)
 
     data.to_parquet(os.path.join(dump_dir, 'cleaned_dataset.parquet'), index=False)
     utils.dump_parquet(data['lineage'], os.path.join(dump_dir, 'flat_labels.parquet'))
+    utils.dump_parquet(data['lineage_hierarchy'], os.path.join(dump_dir, 'hierarchical_labels.parquet'))
     return
-
 
 def extract_and_dump_features(kind:str, sequences, output_dir, *args) -> None:
     if kind == 'kmer':
