@@ -125,7 +125,7 @@ class LocalClassifierPerNode(BaseEstimator, HierarchicalClassifier):
         # Return the classifier
         return self
 
-    def predict(self, X, return_uncertainty=False):
+    def predict(self, X):
         """
         Predict classes for the given data.
 
@@ -148,9 +148,8 @@ class LocalClassifierPerNode(BaseEstimator, HierarchicalClassifier):
         else:
             X = np.array(X)
 
-        # Initialize array that holds predictions and uncertainties
+        # Initialize array that holds predictions
         y = np.empty((X.shape[0], self.max_levels_), dtype=self.dtype_)
-        uncertainties = np.zeros((X.shape[0],))
 
         # TODO: Add threshold to stop prediction halfway if need be
 
@@ -179,23 +178,15 @@ class LocalClassifierPerNode(BaseEstimator, HierarchicalClassifier):
                 prediction = []
                 for i in highest_probability:
                     prediction.append(successors[i])
-                level = nx.shortest_path_length(
-                    self.hierarchy_, self.root_, predecessor
-                )
+                level = nx.shortest_path_length(self.hierarchy_, self.root_, predecessor)
                 prediction = np.array(prediction)
                 y[mask, level] = prediction
-
-                if return_uncertainty:
-                    probabilities = probabilities + 1e-10
-                    entropies = -np.sum(probabilities * np.log2(probabilities), axis=1)
-                    uncertainties[mask] = uncertainties[mask] + entropies
 
         y = self._convert_to_1d(y)
 
         self._remove_separator(y)
 
-        assert y.shape[0] == uncertainties.shape[0], "Shapes do not match" 
-        return y, uncertainties if return_uncertainty else y
+        return y
 
 
     def _initialize_binary_policy(self):

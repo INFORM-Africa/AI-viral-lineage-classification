@@ -1,5 +1,5 @@
 import logging
-from model_selection import cross_val_score
+from model_selection import h_cross_val_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn import metrics as metrics
 import optuna
@@ -7,6 +7,7 @@ import utils, os, time
 from datetime import datetime
 
 # Import the classifiers
+from classifiers import LocalClassifierPerNode
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
@@ -42,8 +43,13 @@ def finetune_rf(features, labels, features_name, reports_dir, n_trials=100):
             n_jobs=-1,
         )
 
-        # Calculate the cross-validation score with 5 folds
-        scores = cross_val_score(rf, features, labels, n_splits=5)
+        h_clf = LocalClassifierPerNode(
+            local_classifier=rf, 
+            replace_classifiers=False,
+            n_jobs=-1,
+        )
+        
+        scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
         accuracy = scores.mean()
         
         return accuracy
@@ -92,13 +98,14 @@ def finetune_xgb(features, labels, features_name, reports_dir, n_trials=100):
             early_stopping_rounds=10,
         )
 
-        scores = cross_val_score(xgb, features, labels, n_splits=5)
+        h_clf = LocalClassifierPerNode(
+            local_classifier=xgb, 
+            replace_classifiers=False,
+            n_jobs=-1,
+        )
+        
+        scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
         accuracy = scores.mean()
-
-        # results = model.evals_result()
-        # # plot learning curves
-        # pyplot.plot(results['validation_0']['logloss'], label='train')
-        # pyplot.plot(results['validation_1']['logloss'], label='test')
 
         return accuracy
     
@@ -142,7 +149,13 @@ def finetune_lgbm(features, labels, features_name, reports_dir, n_trials=100):
             random_state=42,
         )
 
-        scores = cross_val_score(lgbm, features, labels, n_splits=5)
+        h_clf = LocalClassifierPerNode(
+            local_classifier=lgbm, 
+            replace_classifiers=False,
+            n_jobs=-1,
+        )
+        
+        scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
         accuracy = scores.mean()
 
         return accuracy
@@ -187,7 +200,13 @@ def finetune_cb(features, labels, features_name, reports_dir, n_trials=100):
             verbose=0,
         )
 
-        scores = cross_val_score(cb, features, labels, n_splits=5)
+        h_clf = LocalClassifierPerNode(
+            local_classifier=cb, 
+            replace_classifiers=False,
+            n_jobs=-1,
+        )
+        
+        scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
         accuracy = scores.mean()
 
         return accuracy

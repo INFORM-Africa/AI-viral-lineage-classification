@@ -1,6 +1,6 @@
 seaborn
 pandas
-pytorch
+torch
 xgboost
 catboost
 lightgbm
@@ -10,3 +10,4 @@ timebudget
 requests
 biopython
 optuna
+scikit-learn

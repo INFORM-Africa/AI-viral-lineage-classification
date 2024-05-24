@@ -2,6 +2,7 @@ import logging
 import numpy as np
 from sklearn.base import clone
 from sklearn.metrics import accuracy_score
+from classifiers.metrics.metrics import h_f1_score
 
 logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.DEBUG)
 
@@ -72,7 +73,7 @@ def _stratified_k_fold_split(y, n_splits=5, random_state=42):
     return folds
 
 def cross_val_score(estimator, X, y, n_splits=5, random_state=42):    
-    folds = _stratified_k_fold_split(X, y, n_splits, random_state)
+    folds = _stratified_k_fold_split(y, n_splits, random_state)
     scores = []
     
     for i in range(n_splits):
@@ -86,6 +87,26 @@ def cross_val_score(estimator, X, y, n_splits=5, random_state=42):
         estimator_clone.fit(X_train, y_train)
         y_pred = estimator_clone.predict(X_test)
         score = accuracy_score(y_test, y_pred)
+        scores.append(score)
+    
+    return np.array(scores)
+
+
+def h_cross_val_score(estimator, X, y, n_splits=5, random_state=42):    
+    folds = _stratified_k_fold_split(y, n_splits, random_state)
+    scores = []
+    
+    for i in range(n_splits):
+        test_indices = folds[i]
+        train_indices = [idx for fold in folds if fold != folds[i] for idx in fold]
+        
+        X_train, X_test = X[train_indices], X[test_indices]
+        y_train, y_test = y[train_indices], y[test_indices]
+        
+        estimator_clone = clone(estimator)
+        estimator_clone.fit(X_train, y_train)
+        y_pred = estimator_clone.predict(X_test)
+        score = h_f1_score(y_test, y_pred)
         scores.append(score)
     
     return np.array(scores)

@@ -50,3 +50,4 @@ def ambiguity_score(sequence: str):
 
 def remove_ambiguous_bases(seq):
     return "".join([base for base in seq if base in ["A", "C", "G", "T"]])
+

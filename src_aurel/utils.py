@@ -3,6 +3,20 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 
+def load_aliases(path: str = "alias_key.json"):
+    """
+    This function reads the aliases from the alias_key.json file.
+    Arguments:
+        path (str): The path to the alias_key.json file
+    Returns
+        aliases (dict): The aliases dictionary
+    """
+    with open(path, 'r') as alias_file:
+        aliases = json.load(alias_file)
+        
+    return aliases
+
+
 def load_settings(path: str = "settings.json"):
     """
     This function reads the settings from the settings.json file.
@@ -14,6 +28,7 @@ def load_settings(path: str = "settings.json"):
         
     return settings
 
+
 def save_settings(settings: dict, path: str = "settings.json"):
     """
     This function saves the settings to the settings.json file.
@@ -24,6 +39,7 @@ def save_settings(settings: dict, path: str = "settings.json"):
     """
     with open(path, 'w') as settings_file:
         json.dump(settings, settings_file, indent=4)
+
 
 def load_feature_params(path: str = "feature_params.json"):
     with open(path, 'r') as params_file:

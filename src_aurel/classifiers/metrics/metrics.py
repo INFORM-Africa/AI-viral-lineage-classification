@@ -259,3 +259,20 @@ def _compute_macro(y_true: np.ndarray, y_pred: np.ndarray, _micro_function):
         sample_score = _micro_function(np.array([ground_truth]), np.array([prediction]))
         overall_sum = overall_sum + sample_score
     return overall_sum / len(y_true)
+
+
+def h_classification_report(y_true, y_pred):
+    r"""
+    Build a text report showing the main classification metrics.
+
+    Parameters y_true (np.array of shape (n_samples, n_levels)) : Ground truth (correct) labels. y_pred (np.array of
+    shape (n_samples, n_levels)) : Predicted labels, as returned by a classifier.
+
+    Returns
+        report (str) : Text summary of the precision, recall, and f1-score.
+    """
+    precision = h_precision_score(y_true, y_pred)
+    recall = h_recall_score(y_true, y_pred)
+    f1 = h_f1_score(y_true, y_pred)
+    report = f"Precision: {precision}\nRecall: {recall}\nF1-score: {f1}\n"
+    return report

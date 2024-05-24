@@ -5,6 +5,7 @@ from feature_extraction import ConventionalFeatures, MurugaiahFeatures
 import utils
 from preprocessing.read_data import extract_metadata, extract_sequences, remove_consensus_call_sequences
 from preprocessing.read_data import clean_sequences, clean_collection_dates, get_hierarchy, merge_dfs
+from preprocessing.read_data import remove_recombinant_lineages, remove_unassigned_lineages, map_alias_to_lineage
 
 
 def download_and_save_data(url: str, output_dir:str) -> None:
@@ -16,7 +17,7 @@ def download_and_save_data(url: str, output_dir:str) -> None:
 def should_create(output_dir:str) -> bool:
     return not os.path.exists(output_dir)
 
-def clean_and_dump_data(input_dir, dump_dir) -> None:
+def clean_and_dump_data(input_dir, dump_dir, aliases) -> None:
     metadata = extract_metadata(input_dir)
     metadata = clean_collection_dates(metadata)
 
@@ -25,10 +26,16 @@ def clean_and_dump_data(input_dir, dump_dir) -> None:
     
     data = merge_dfs(metadata, sequences)
     data = remove_consensus_call_sequences(data)
-    data["lineage_hierarchy"] = data["lineage"].apply(get_hierarchy)
+    data = remove_unassigned_lineages(data)
+    data = remove_recombinant_lineages(data, 'lineage')
+
+    data["full_lineage"] = data["lineage"].apply(lambda x: map_alias_to_lineage(x, aliases))
+    data = remove_recombinant_lineages(data, 'full_lineage')
+
+    data["lineage_hierarchy"] = data["full_lineage"].apply(get_hierarchy)
 
     data.to_parquet(os.path.join(dump_dir, 'cleaned_dataset.parquet'), index=False)
-    utils.dump_parquet(data['lineage'], os.path.join(dump_dir, 'flat_labels.parquet'))
+    utils.dump_parquet(data['full_lineage'], os.path.join(dump_dir, 'flat_labels.parquet'))
     utils.dump_parquet(data['lineage_hierarchy'], os.path.join(dump_dir, 'hierarchical_labels.parquet'))
     return
 
@@ -69,10 +76,11 @@ def extract_and_dump_features(kind:str, sequences, output_dir, *args) -> None:
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.DEBUG)
 
-    url = "https://download1591.mediafire.com/vnfbz44a9zjgrMzzQvp_yyugINOzdoSwuLnMead0XC8dpkl-oLwHr45OjhI25NCALEoMGvXSo0OnvconWhLbczAwUHYcG81aULMxQQwwF6Je4GSLA-pnd0yZuatlMvk6qoY2MtvPI2ROSST2_09zv5GxAzQOCGwJ4Qe4pd03fA/cugn87w78xejegc/raw_data.zip"
-    
+    url = "https://download1591.mediafire.com/0o2igpgms50geZLBF3M4_C8A4Ph-SvXh7n0KG8Ra0VGZmX_Ye-AiBhbOHWLcDKwgQyVWK76ueVIwki9Yf1yJYYiRra9Rpm0HQkG8600A_tefDO7BZjPnMu6d_daHTjDHb5lna69GjjCqu1aNBZRAVP3R7HJpamD4pzyrrI03Bw/cugn87w78xejegc/raw_data.zip"
+        
     logging.info("Loading settings")
     settings = utils.load_settings(path="src_aurel/settings.json")
+    aliases = utils.load_aliases(path="src_aurel/alias_key.json")
     raw_data_dir = settings['raw_data_dir']
     features_dir = settings['features_dir']
     dataset_dir = settings['dataset_dir']
@@ -88,7 +96,7 @@ if __name__ == '__main__':
     if should_create(cleaned_data_dir):
         logging.info("Cleaning the raw data")
         os.makedirs(cleaned_data_dir, exist_ok=True)
-        clean_and_dump_data(input_dir=raw_data_dir, dump_dir=cleaned_data_dir)
+        clean_and_dump_data(input_dir=raw_data_dir, dump_dir=cleaned_data_dir, aliases=aliases)
         logging.info("Cleaning OK")
     else:
         logging.info("Cleaned data already exists, skipping...")

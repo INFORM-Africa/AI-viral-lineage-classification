@@ -91,6 +91,12 @@ def remove_consensus_call_sequences(sequences_df):
     sequences_df.drop(consensus_indexes, inplace=True)
     return sequences_df
 
+def remove_unassigned_lineages(sequences_df):
+    return sequences_df[sequences_df["lineage"] != "Unassigned"]
+
+def remove_recombinant_lineages(sequences_df, column_name):
+    return sequences_df[~sequences_df[column_name].str.contains("X")]
+
 def get_hierarchy(lineage:str):
     parts = lineage.split('.')
     hierarchy = []
@@ -107,3 +113,12 @@ def normalize_hierarchies(hierarchy_labels):
     ])
     
     return normalized_array
+
+def map_alias_to_lineage(lineage, aliases):
+    try:
+        key = lineage.split(".")[0]
+        true_lineage = aliases[key] if aliases[key] != "" else key
+        full_lineage = true_lineage + lineage[len(key):]
+        return full_lineage
+    except KeyError:
+        print(f"KeyError: {key} while processing lineage {lineage}")
