@@ -5,12 +5,15 @@
     "features_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/dataset/features/",
     "reports_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/reports/",
     "plots_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/plots/",
-    "fine_tune_models": ["rf", "xgb", "lgbm", "cb"],
+    "hierachical_architectures": ["flat", "lcpn", "lcppn", "lcpl"],
+    "fine_tune_models": ["xgb"],
+    "train_models": ["rf", "xgb", "lgbm", "cb"],
     "optuna_trials": {
         "xgb": 10,
         "lgbm": 10,
         "cb": 10,
         "rf": 100
     },
-    "fine_tune_completed": ["rf::kmer_5", "rf::kmer_6", "rf::kmer_7", "rf::kmer_8", "rf::fcgr_64", "rf::fcgr_128", "rf::murugaiah", "xgb::kmer_5"]
-}
+    "fine_tune_completed": [],
+    "training_completed": []
+    }

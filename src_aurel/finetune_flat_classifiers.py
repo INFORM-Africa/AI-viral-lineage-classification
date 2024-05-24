@@ -95,11 +95,6 @@ def finetune_xgb(features, labels, features_name, reports_dir, n_trials=100):
         scores = cross_val_score(xgb, features, labels, n_splits=5)
         accuracy = scores.mean()
 
-        # results = model.evals_result()
-        # # plot learning curves
-        # pyplot.plot(results['validation_0']['logloss'], label='train')
-        # pyplot.plot(results['validation_1']['logloss'], label='test')
-
         return accuracy
     
     start_time = time.time()
@@ -229,7 +224,7 @@ def finetune_model_with_features(model:str, X, y, feature:str, n_trials, reports
 if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.DEBUG)
 
-    settings = utils.load_settings(path="src_aurel/settings.json")
+    settings = utils.load_settings(path="src_aurel/settings_sample.json")
     params = utils.load_feature_params(path="src_aurel/feature_params.json")
 
     logging.info("Loading settings")

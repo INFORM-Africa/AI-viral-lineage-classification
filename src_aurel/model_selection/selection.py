@@ -56,32 +56,50 @@ def _stratified_k_fold_split(y, n_splits=5, random_state=42):
     # Initialize folds
     folds = [[] for _ in range(n_splits)]
     
-    # Distribute instances of each class equally among the folds
+    # Distribute instances of each class to ensure at least one instance per fold
     for class_value in valid_classes:
         class_mask = (y_valid == class_value)
         class_indices = np.where(class_mask)[0]
         np.random.shuffle(class_indices)
         
-        fold_sizes = np.full(n_splits, len(class_indices) // n_splits)
-        fold_sizes[:len(class_indices) % n_splits] += 1
+        # Ensure at least one instance of each class in each fold
+        for fold in range(n_splits):
+            folds[fold].append(class_indices[fold])
+        
+        # Distribute remaining instances
+        remaining_indices = class_indices[n_splits:]
+        fold_sizes = np.full(n_splits, len(remaining_indices) // n_splits)
+        fold_sizes[:len(remaining_indices) % n_splits] += 1
         
         current = 0
         for fold, fold_size in enumerate(fold_sizes):
-            folds[fold].extend(class_indices[current:current + fold_size])
+            folds[fold].extend(remaining_indices[current:current + fold_size])
             current += fold_size
     
-    return folds
+    for fold in folds:
+        assert set(np.unique(y_valid[fold])) == set(valid_classes), "Folds must contain all classes"
+    
+    return folds, y_valid
+
 
 def cross_val_score(estimator, X, y, n_splits=5, random_state=42):    
-    folds = _stratified_k_fold_split(y, n_splits, random_state)
+    folds, y = _stratified_k_fold_split(y, n_splits, random_state)
     scores = []
+    unique_targets = np.unique(y)
+    target_mapping = {old_label: new_label for new_label, old_label in enumerate(sorted(unique_targets))}
     
     for i in range(n_splits):
         test_indices = folds[i]
-        train_indices = [idx for fold in folds if fold != folds[i] for idx in fold]
+        train_indices = []
+        for j in range(n_splits):
+            if j != i:
+                train_indices.extend(folds[j])
         
         X_train, X_test = X[train_indices], X[test_indices]
         y_train, y_test = y[train_indices], y[test_indices]
+
+        y_train = np.array([target_mapping[label] for label in y_train])
+        y_test = np.array([target_mapping[label] for label in y_test])
         
         estimator_clone = clone(estimator)
         estimator_clone.fit(X_train, y_train)
