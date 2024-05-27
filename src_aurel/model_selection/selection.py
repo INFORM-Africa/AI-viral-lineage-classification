@@ -56,7 +56,6 @@ def _stratified_k_fold_split(y, n_splits=5, random_state=42):
     # Initialize folds
     folds = [[] for _ in range(n_splits)]
     
-    # Distribute instances of each class to ensure at least one instance per fold
     for class_value in valid_classes:
         class_mask = (y_valid == class_value)
         class_indices = np.where(class_mask)[0]
@@ -111,8 +110,10 @@ def cross_val_score(estimator, X, y, n_splits=5, random_state=42):
 
 
 def h_cross_val_score(estimator, X, y, n_splits=5, random_state=42):    
-    folds = _stratified_k_fold_split(y, n_splits, random_state)
+    folds, y = _stratified_k_fold_split(y, n_splits, random_state)
     scores = []
+    unique_targets = np.unique(y)
+    target_mapping = {old_label: new_label for new_label, old_label in enumerate(sorted(unique_targets))}
     
     for i in range(n_splits):
         test_indices = folds[i]
@@ -120,6 +121,9 @@ def h_cross_val_score(estimator, X, y, n_splits=5, random_state=42):
         
         X_train, X_test = X[train_indices], X[test_indices]
         y_train, y_test = y[train_indices], y[test_indices]
+
+        y_train = np.array([target_mapping[label] for label in y_train])
+        y_test = np.array([target_mapping[label] for label in y_test])
         
         estimator_clone = clone(estimator)
         estimator_clone.fit(X_train, y_train)

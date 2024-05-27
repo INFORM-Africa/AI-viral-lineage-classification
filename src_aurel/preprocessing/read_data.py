@@ -3,6 +3,7 @@ import pandas as pd
 from Bio import SeqIO
 from .prepro import remove_ambiguous_bases
 import numpy as np
+import utils
 
 
 def extract_metadata(dataset_path):
@@ -122,3 +123,60 @@ def map_alias_to_lineage(lineage, aliases):
         return full_lineage
     except KeyError:
         print(f"KeyError: {key} while processing lineage {lineage}")
+
+def write_columns_to_file(df, lineage_col, filename):
+    try:
+        df_to_write = df[['Accession ID', lineage_col]]
+        df_to_write.to_csv(filename, sep='\t', index=False)
+    except KeyError as e:
+        print(f"Error: One or more specified columns are not found in the DataFrame. {e}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+def get_unique_families(data):
+    family = set()
+    lfamily = set()
+    for _, row in data.iterrows():
+        f = row['full_lineage'].split('.')[0]
+        lf = row['lineage'].split('.')[0]
+        family.add(f)
+        lfamily.add(lf)
+
+    return family, lfamily
+
+
+def get_report(input_dir:str, output_dir:str, alias_path:str="alias_key.json"):
+    metadata = extract_metadata(input_dir)
+    metadata = clean_collection_dates(metadata)
+
+    sequences = extract_sequences(input_dir)
+    sequences = clean_sequences(sequences)
+
+    data = merge_dfs(metadata, sequences)
+
+    aliases = utils.load_aliases(path=alias_path)
+
+    dd = data[data['lineage'].str.contains('consensus call')]
+    data = data[~data['lineage'].str.contains('consensus call')]
+    write_columns_to_file(dd, 'lineage', os.path.join(output_dir, 'consensus_call_lineages.tsv'))
+
+    dd = data[data['lineage'].str.contains('Unassigned')]
+    data = data[~data['lineage'].str.contains('Unassigned')]
+    write_columns_to_file(dd, 'lineage', os.path.join(output_dir, 'unassigned_lineages.tsv'))
+
+    dd = data[data.lineage.str.contains("X")]
+    data = data[~data.lineage.str.contains("X")]
+    write_columns_to_file(dd, 'lineage', os.path.join(output_dir, 'recombinant_before_renaming.tsv'))
+
+    data["full_lineage"] = data["lineage"].apply(lambda x: map_alias_to_lineage(x, aliases))
+
+    dd = data[data.full_lineage.str.contains("X")]
+    data = data[~data.full_lineage.str.contains("X")]
+    write_columns_to_file(dd, 'full_lineage', os.path.join(output_dir, 'recombinant_after_renaming.tsv'))
+
+    write_columns_to_file(data, 'full_lineage', os.path.join(output_dir, 'final_lineages.tsv'))
+
+    family, lfamily = get_unique_families(data)
+
+    print(f"Full lineages family : {family}")
+    print(f"Aliases family : {lfamily}")

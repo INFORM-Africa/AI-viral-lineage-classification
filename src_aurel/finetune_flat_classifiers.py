@@ -12,7 +12,7 @@ from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 
-h_type = "lcpn"
+h_type = "flat"
 
 
 def get_timestamp():
@@ -89,7 +89,6 @@ def finetune_xgb(features, labels, features_name, reports_dir, n_trials=100):
             verbosity=3,
             device = "cuda",
             eval_metric='mlogloss',
-            early_stopping_rounds=10,
         )
 
         scores = cross_val_score(xgb, features, labels, n_splits=5)
@@ -224,7 +223,7 @@ def finetune_model_with_features(model:str, X, y, feature:str, n_trials, reports
 if __name__ == "__main__":
     logging.basicConfig(format='%(asctime)s - %(message)s', datefmt='%d-%b-%y %H:%M:%S', level=logging.DEBUG)
 
-    settings = utils.load_settings(path="src_aurel/settings_sample.json")
+    settings = utils.load_settings(path="src_aurel/settings.json")
     params = utils.load_feature_params(path="src_aurel/feature_params.json")
 
     logging.info("Loading settings")

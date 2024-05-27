@@ -8,6 +8,7 @@
     "hierachical_architectures": ["flat", "lcpn", "lcppn", "lcpl"],
     "fine_tune_models": ["xgb"],
     "train_models": ["rf", "xgb", "lgbm", "cb"],
+    "variants_detection_completed": ["kmer_5", "kmer_6", "kmer_7", "kmer_8", "fcgr_64", "fcgr_128"],
     "optuna_trials": {
         "xgb": 10,
         "lgbm": 10,
@@ -15,5 +16,7 @@
         "rf": 100
     },
     "fine_tune_completed": [],
-    "training_completed": []
-    }
+    "training_completed": [],
+    "detection_start_date": "2020-03-29",
+    "detection_step": 5
+}

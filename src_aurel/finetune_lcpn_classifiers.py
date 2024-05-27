@@ -1,7 +1,8 @@
 import logging
-from model_selection import h_cross_val_score
-from sklearn.preprocessing import LabelEncoder
-from sklearn import metrics as metrics
+# from model_selection import train_test_split
+from sklearn.model_selection import train_test_split
+from preprocessing.read_data import normalize_hierarchies
+from classifiers import metrics as hmetrics
 import optuna
 import utils, os, time
 from datetime import datetime
@@ -20,9 +21,11 @@ def get_timestamp():
     now = datetime.now()
     return int(now.timestamp())
 
-def finetune_rf(features, labels, features_name, reports_dir, n_trials=100):
+def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'{h_type}_rf_{features_name}_{timestamp}.txt')
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
+    
     
     def objective(trial):
         # Define the search space for hyperparameters
@@ -48,9 +51,12 @@ def finetune_rf(features, labels, features_name, reports_dir, n_trials=100):
             replace_classifiers=False,
             n_jobs=-1,
         )
+
+        h_clf.fit(X_train, y_train)
         
-        scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
-        accuracy = scores.mean()
+        # Calculate the accuracy score on the validation set
+        y_pred = h_clf.predict(X_test)
+        accuracy = hmetrics.h_f1_score(y_test, y_pred)
         
         return accuracy
     
@@ -71,9 +77,10 @@ def finetune_rf(features, labels, features_name, reports_dir, n_trials=100):
     logging.info(f"Logs saved to {reports_filename}")
 
 
-def finetune_xgb(features, labels, features_name, reports_dir, n_trials=100):
+def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_xgb_{features_name}_{timestamp}.txt')
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
     
     def objective(trial):
         gamma = trial.suggest_float('gamma', 1e-8, 1.0, log=True)
@@ -104,8 +111,11 @@ def finetune_xgb(features, labels, features_name, reports_dir, n_trials=100):
             n_jobs=-1,
         )
         
-        scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
-        accuracy = scores.mean()
+        h_clf.fit(X_train, y_train)
+        
+        # Calculate the accuracy score on the validation set
+        y_pred = h_clf.predict(X_test)
+        accuracy = hmetrics.h_f1_score(y_test, y_pred)
 
         return accuracy
     
@@ -125,9 +135,10 @@ def finetune_xgb(features, labels, features_name, reports_dir, n_trials=100):
     logging.info(f"Finetuning completed with {study.best_value} accuracy")
     logging.info(f"Logs saved to {reports_filename}")
     
-def finetune_lgbm(features, labels, features_name, reports_dir, n_trials=100):
+def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
-    reports_filename = os.path.join(reports_dir, f'flat_lgbm_{features_name}_{timestamp}.txt')    
+    reports_filename = os.path.join(reports_dir, f'flat_lgbm_{features_name}_{timestamp}.txt')  
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)  
     
     def objective(trial):
         learning_rate = trial.suggest_float('learning_rate', 1e-3, 0.1, log=True)
@@ -155,8 +166,11 @@ def finetune_lgbm(features, labels, features_name, reports_dir, n_trials=100):
             n_jobs=-1,
         )
         
-        scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
-        accuracy = scores.mean()
+        h_clf.fit(X_train, y_train)
+        
+        # Calculate the accuracy score on the validation set
+        y_pred = h_clf.predict(X_test)
+        accuracy = hmetrics.h_f1_score(y_test, y_pred)
 
         return accuracy
     
@@ -176,9 +190,10 @@ def finetune_lgbm(features, labels, features_name, reports_dir, n_trials=100):
     logging.info(f"Finetuning completed with {study.best_value} accuracy")
     logging.info(f"Logs saved to {reports_filename}")
     
-def finetune_cb(features, labels, features_name, reports_dir, n_trials=100):
+def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
     timestamp = get_timestamp()
     reports_filename = os.path.join(reports_dir, f'flat_cb_{features_name}_{timestamp}.txt')
+    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
     
     def objective(trial):
         bagging_temperature = trial.suggest_float('bagging_temperature', 0, 1.0)
@@ -206,8 +221,11 @@ def finetune_cb(features, labels, features_name, reports_dir, n_trials=100):
             n_jobs=-1,
         )
         
-        scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
-        accuracy = scores.mean()
+        h_clf.fit(X_train, y_train)
+        
+        # Calculate the accuracy score on the validation set
+        y_pred = h_clf.predict(X_test)
+        accuracy = hmetrics.h_f1_score(y_test, y_pred)
 
         return accuracy
     
@@ -264,10 +282,10 @@ if __name__ == "__main__":
     else:
         fine_tune_completed = []
 
-    logging.info(f"Loading labels file flat_labels.parquet")
-    le = LabelEncoder()
-    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "flat_labels.parquet"))
-    y = le.fit_transform(y.flatten())
+    logging.info(f"Loading labels file hierarchical_labels.parquet")
+    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "hierarchical_labels.parquet"))
+    y = normalize_hierarchies(y[:, 0])
+
 
     for model in fine_tune_models:
         if model not in ['rf', 'xgb', 'lgbm', 'cb']:

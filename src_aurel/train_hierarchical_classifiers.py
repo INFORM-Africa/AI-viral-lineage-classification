@@ -103,7 +103,7 @@ if __name__ == "__main__":
     else:
         training_completed = []
 
-    logging.info(f"Loading labels file flat_labels.parquet")
+    logging.info(f"Loading labels file hierarchical_labels.parquet")
     y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "hierarchical_labels.parquet"))
     y = normalize_hierarchies(y[:, 0])
 
