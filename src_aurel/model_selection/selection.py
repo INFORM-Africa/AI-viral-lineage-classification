@@ -109,15 +109,20 @@ def cross_val_score(estimator, X, y, n_splits=5, random_state=42):
     return np.array(scores)
 
 
-def h_cross_val_score(estimator, X, y, n_splits=5, random_state=42):    
+def cross_val_predict(estimator, X, y, n_splits=5, random_state=42):    
     folds, y = _stratified_k_fold_split(y, n_splits, random_state)
-    scores = []
+
     unique_targets = np.unique(y)
+    y_pred = np.zeros_like(y)
     target_mapping = {old_label: new_label for new_label, old_label in enumerate(sorted(unique_targets))}
+    reversed_target_mapping = {new_label: old_label for new_label, old_label in target_mapping.items()}
     
     for i in range(n_splits):
         test_indices = folds[i]
-        train_indices = [idx for fold in folds if fold != folds[i] for idx in fold]
+        train_indices = []
+        for j in range(n_splits):
+            if j != i:
+                train_indices.extend(folds[j])
         
         X_train, X_test = X[train_indices], X[test_indices]
         y_train, y_test = y[train_indices], y[test_indices]
@@ -127,10 +132,8 @@ def h_cross_val_score(estimator, X, y, n_splits=5, random_state=42):
         
         estimator_clone = clone(estimator)
         estimator_clone.fit(X_train, y_train)
-        y_pred = estimator_clone.predict(X_test)
-        score = h_f1_score(y_test, y_pred)
-        scores.append(score)
+        y_pred[test_indices] = estimator_clone.predict(X_test)
     
-    return np.array(scores)
-
-
+    y_pred = np.array([reversed_target_mapping[label] for label in y_pred])
+    
+    return y_pred

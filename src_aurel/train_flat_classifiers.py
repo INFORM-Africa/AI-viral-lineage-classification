@@ -1,8 +1,6 @@
 import utils, os, logging, time
-from model_selection import train_test_split
-from classifiers import metrics as hmetrics
-from classifiers import LocalClassifierPerLevel, LocalClassifierPerNode, LocalClassifierPerParentNode
-from preprocessing.read_data import normalize_hierarchies
+from model_selection import cross_val_predict
+from sklearn.metrics import classification_report, matthews_corrcoef
 
 # Import classifiers
 from sklearn.ensemble import RandomForestClassifier
@@ -10,48 +8,29 @@ from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 
+h_type = 'flat'
 
-def train_model(clf, X, y, h_type, feature, clf_name, reports_dir, test_size=0.2):
+def train_model(clf, X, y, feature, clf_name, reports_dir):
     start_time = time.time()
     reports_filename = os.path.join(reports_dir, f'training_{h_type}_{clf_name}_{feature}.txt')
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
+    # Perform cross-validated predictions
+    y_pred = cross_val_predict(clf, X, y, n_splits=5)
 
-    if h_type == 'lcpl':
-        logging.info(f"Training Local Classifier Per Level with {feature} features")
-        h_clf = LocalClassifierPerLevel(
-            local_classifier=clf, 
-            replace_classifiers=False,
-            n_jobs=-1,
-        )
-    elif h_type == 'lcpn':
-        logging.info(f"Training Local Classifier Per Node with {feature} features")
-        h_clf = LocalClassifierPerNode(
-            local_classifier=clf,
-            replace_classifiers=False,
-            n_jobs=-1,
-            binary_policy="inclusive",
-        )
-    elif h_type == 'lcppn':
-        logging.info(f"Training Local Classifier Per Parent Node with {feature} features")
-        h_clf = LocalClassifierPerParentNode(
-            local_classifier=clf,
-            n_jobs=-1,
-            replace_classifiers=False,
-        )
-    else:
-        raise ValueError(f"Invalid hierarchical architecture: {h_type}")
+    utils.dump_parquet(
+        data=y_pred, 
+        path=os.path.join(reports_dir, f'{h_type}_{clf_name}_{feature}_predictions.parquet')
+    )
 
-
-    h_clf.fit(X_train, y_train)
-
-    predictions = h_clf.predict(X_test)
-    report = hmetrics.h_classification_report(y_test, predictions)
+    # Generate, save and print the classification report
+    report = classification_report(y, y_pred)
+    mcc = matthews_corrcoef(y, y_pred)
     elapsed_time = time.time() - start_time
 
     # Save logs
     with open(reports_filename, 'a') as file:
         file.write(report)
+        file.write(f"\nMCC: {mcc}\n")
 
     utils.write_training_duration(
         h_model=h_type, 
@@ -104,7 +83,7 @@ def train_model_with_features(htype:str, model:str, X, y, feature:str, reports_d
     else:
         raise ValueError(f"Invalid model: {model}")
     
-    train_model(clf, X, y, feature, htype, model, reports_dir)
+    train_model(clf, X, y, feature, model, reports_dir)
     return
 
 
@@ -124,9 +103,8 @@ if __name__ == "__main__":
     else:
         training_completed = []
 
-    logging.info(f"Loading labels file hierarchical_labels.parquet")
-    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "hierarchical_labels.parquet"))
-    y = normalize_hierarchies(y[:, 0])
+    logging.info(f"Loading labels file flat_labels.parquet")
+    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "flat_labels.parquet"))
 
     for finetuned_model in finetuned_models:
         if finetuned_model in training_completed:
@@ -134,20 +112,19 @@ if __name__ == "__main__":
             continue
 
         hmodel, model, feature = finetuned_model.split("::")
+        
+        features_path = os.path.join(features_dir, f"{feature}_features.parquet")
+        X = utils.read_parquet_to_np(features_path)
 
-        if hmodel != 'flat':
-            features_path = os.path.join(features_dir, f"{feature}_features.parquet")
-            X = utils.read_parquet_to_np(features_path)
-
-            train_model_with_features(
-                htype=hmodel,
-                model=model,
-                X=X,
-                y=y,
-                feature=feature,
-                reports_dir=reports_dir,
-            )
-            training_completed.append(finetuned_model)
-            settings["training_completed"] = training_completed
-            utils.save_settings(settings, path="src_aurel/settings.json")
-            logging.info(f"Trained models updated with {finetuned_model}")
+        train_model_with_features(
+            htype=hmodel,
+            model=model,
+            X=X,
+            y=y,
+            feature=feature,
+            reports_dir=reports_dir,
+        )
+        training_completed.append(finetuned_model)
+        settings["training_completed"] = training_completed
+        utils.save_settings(settings, path="src_aurel/settings.json")
+        logging.info(f"Trained models updated with {finetuned_model}")

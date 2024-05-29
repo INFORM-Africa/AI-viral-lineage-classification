@@ -1,4 +1,4 @@
-import json
+import json, os, ast
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -70,3 +70,30 @@ def read_parquet_to_np(path):
     table = pq.read_table(path)
     data = table.to_pandas().to_numpy()
     return data
+
+def read_best_hyperparameters(h_model:str, model:str, feature:str, reports_dir:str):
+    file_path = os.path.join(reports_dir, f'{h_model}_{model}_{feature}.txt')
+
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+            if line.startswith("Best hyperparameters:"):
+                hyperparams_str = line.split("Best hyperparameters: ")[1].strip()
+                hyperparams_dict = ast.literal_eval(hyperparams_str)
+                return hyperparams_dict
+        raise ValueError(f"Best hyperparameters not found in {file_path}")
+    
+def write_training_duration(h_model:str, model:str, feature:str, reports_dir:str, duration:float):
+    file_path = os.path.join(reports_dir, f'training_durations.txt')
+    with open(file_path, 'a') as file:
+        file.write(f"{h_model}::{model}::{feature} ==> {duration:.4f} seconds\n")
+    
+    return
+
+def write_detection_outputs(features:str, query_strategy:str, reports_dir:str, reported_lineages_df:pd.DataFrame, missed_lineages_df:pd.DataFrame, detection_dates_df:pd.DataFrame):
+    reported_lineages_filename = os.path.join(reports_dir, f'{features}_reported_lineages_{query_strategy}.tsv')
+    missed_lineages_filename = os.path.join(reports_dir, f'{features}_missed_lineages_{query_strategy}.tsv')
+    detection_dates_filename = os.path.join(reports_dir, f'{features}_detection_dates_{query_strategy}.tsv')
+    reported_lineages_df.to_csv(reported_lineages_filename, sep='\t', index=False)
+    missed_lineages_df.to_csv(missed_lineages_filename, sep='\t', index=False)
+    detection_dates_df.to_csv(detection_dates_filename, sep='\t', index=False)

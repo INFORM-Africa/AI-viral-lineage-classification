@@ -8,13 +8,13 @@ import utils, os, time
 from datetime import datetime
 
 # Import the classifiers
-from classifiers import LocalClassifierPerNode
+from classifiers import LocalClassifierPerLevel
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 
-h_type = "lcpn"
+h_type = "lcpl"
 
 
 def get_timestamp():
@@ -46,7 +46,7 @@ def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_t
             n_jobs=-1,
         )
 
-        h_clf = LocalClassifierPerNode(
+        h_clf = LocalClassifierPerLevel(
             local_classifier=rf, 
             replace_classifiers=False,
             n_jobs=-1,
@@ -105,7 +105,7 @@ def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_
             early_stopping_rounds=10,
         )
 
-        h_clf = LocalClassifierPerNode(
+        h_clf = LocalClassifierPerLevel(
             local_classifier=xgb, 
             replace_classifiers=False,
             n_jobs=-1,
@@ -160,7 +160,7 @@ def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n
             random_state=42,
         )
 
-        h_clf = LocalClassifierPerNode(
+        h_clf = LocalClassifierPerLevel(
             local_classifier=lgbm, 
             replace_classifiers=False,
             n_jobs=-1,
@@ -215,7 +215,7 @@ def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_t
             verbose=0,
         )
 
-        h_clf = LocalClassifierPerNode(
+        h_clf = LocalClassifierPerLevel(
             local_classifier=cb, 
             replace_classifiers=False,
             n_jobs=-1,
