@@ -44,7 +44,7 @@ class ActiveLearning(BaseEstimator, ClassifierMixin):
             X_labeled, y_labeled = X[training_set_mask], y[training_set_mask]
             X_window, y_window = X[testing_set_mask], y[testing_set_mask]
 
-            if X.shape[0] == 0:
+            if X_window.shape[0] == 0:
                 t += 1
                 current_date = end_date
                 continue

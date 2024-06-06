@@ -1,8 +1,40 @@
+#!/bin/bash
+
 # ssh to the VM
 # gcloud compute ssh aims-project-vm --project aims-ai2324-std-aurel-5ul
 # ssh-add ~/.ssh/google_compute_engine	
 
-VM="aims-project-vm-2"
+# Function to display usage message
+usage() {
+  echo "Usage: $0 -n VM_ID"
+  exit 1
+}
+
+# Parse command line options
+while getopts ":n:" opt; do
+  case $opt in
+    n)
+      VM_ID=$OPTARG
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      ;;
+    :)
+      echo "Option -$OPTARG requires an argument." >&2
+      usage
+      ;;
+  esac
+done
+
+# Check if VM_ID is set
+if [ -z "$VM_ID" ]; then
+  echo "VM_ID is required"
+  usage
+fi
+
+# Define variables
+VM="aims-project-vm-$VM_ID"
 DIR="~/aims-project"
 SRCDIR="~/aims-project/source"
 

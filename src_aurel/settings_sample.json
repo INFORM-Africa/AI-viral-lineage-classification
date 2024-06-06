@@ -5,9 +5,10 @@
     "features_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/dataset/features/",
     "reports_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/reports/",
     "plots_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/plots/",
-    "hierachical_architectures": ["flat", "lcpn", "lcppn", "lcpl"],
     "fine_tune_models": ["xgb"],
-    "train_models": ["rf", "xgb", "lgbm", "cb"],
+    "test_size": 0.2,
+    "use_cross_validation": false,
+    "baseline_classifiers": ["most_frequent", "uniform"],
     "variants_detection_completed": ["kmer_5", "kmer_6", "kmer_7", "kmer_8", "fcgr_64", "fcgr_128"],
     "optuna_trials": {
         "xgb": 10,

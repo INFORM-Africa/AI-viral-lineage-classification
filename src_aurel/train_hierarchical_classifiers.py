@@ -1,8 +1,7 @@
+import sys
 import utils, os, logging, time
-from model_selection import train_test_split
-from classifiers import metrics as hmetrics
+from model_selection import h_train_test_split_predict
 from classifiers import LocalClassifierPerLevel, LocalClassifierPerNode, LocalClassifierPerParentNode
-from preprocessing.read_data import normalize_hierarchies
 
 # Import classifiers
 from sklearn.ensemble import RandomForestClassifier
@@ -11,11 +10,9 @@ from lightgbm import LGBMClassifier
 from xgboost import XGBClassifier
 
 
-def train_model(clf, X, y, h_type, feature, clf_name, reports_dir, test_size=0.2):
+def train_model(clf, X, y, test_size, h_type, feature, clf_name, reports_dir):
     start_time = time.time()
     reports_filename = os.path.join(reports_dir, f'training_{h_type}_{clf_name}_{feature}.txt')
-
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=42)
 
     if h_type == 'lcpl':
         logging.info(f"Training Local Classifier Per Level with {feature} features")
@@ -42,11 +39,14 @@ def train_model(clf, X, y, h_type, feature, clf_name, reports_dir, test_size=0.2
     else:
         raise ValueError(f"Invalid hierarchical architecture: {h_type}")
 
+    report = h_train_test_split_predict(
+        estimator=h_clf,
+        X=X, 
+        y=y, 
+        test_size=test_size, 
+        random_state=42
+    )
 
-    h_clf.fit(X_train, y_train)
-
-    predictions = h_clf.predict(X_test)
-    report = hmetrics.h_classification_report(y_test, predictions)
     elapsed_time = time.time() - start_time
 
     # Save logs
@@ -54,23 +54,30 @@ def train_model(clf, X, y, h_type, feature, clf_name, reports_dir, test_size=0.2
         file.write(report)
 
     utils.write_training_duration(
-        h_model=h_type, 
+        h_model=h_type,
         model=clf_name, 
-        feature=feature, 
-        reports_dir=reports_dir, 
-        duration=elapsed_time
+        feature=feature,
+        reports_dir=reports_dir,
+        duration=elapsed_time,
     )
     
     logging.info(f"Training completed in {elapsed_time:.2f} with \n{report}")
     logging.info(f"Logs saved to {reports_filename}")
 
 
-def train_model_with_features(htype:str, model:str, X, y, feature:str, reports_dir:str):
+def train_model_with_features(htype:str, model:str, X, y, test_size:float, split:str, feature:str, reports_dir:str):
+    file_path = os.path.join(reports_dir, f'{htype}_{model}_{split}_{feature}.txt')
+    
+    if not os.path.exists(file_path):
+        logging.info(f"Best hyperparameters file not found: {file_path}")
+        return
+    
     model_params = utils.read_best_hyperparameters(
         h_model=htype,
         model=model,
         feature=feature,
         reports_dir=reports_dir,
+        split=split,
     )
 
     if model == 'rf':
@@ -104,7 +111,7 @@ def train_model_with_features(htype:str, model:str, X, y, feature:str, reports_d
     else:
         raise ValueError(f"Invalid model: {model}")
     
-    train_model(clf, X, y, feature, htype, model, reports_dir)
+    train_model(clf, X, y, test_size, htype, feature, model, reports_dir)
     return
 
 
@@ -118,24 +125,27 @@ if __name__ == "__main__":
     cleaned_data_dir = settings["cleaned_data_dir"]
     reports_dir = settings["reports_dir"]
     finetuned_models = settings["fine_tune_completed"]
+    test_size = settings["test_size"]
+    cv = settings["use_cross_validation"]
+    split = "cv" if cv else "tts"
 
     if "training_completed" in settings:
         training_completed = settings["training_completed"]
     else:
         training_completed = []
 
-    logging.info(f"Loading labels file hierarchical_labels.parquet")
-    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "hierarchical_labels.parquet"))
-    y = normalize_hierarchies(y[:, 0])
+    logging.info(f"Loading labels file flat_labels.parquet")
+    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "flat_labels.parquet"))
+    y = y.flatten()
 
     for finetuned_model in finetuned_models:
-        if finetuned_model in training_completed:
-            logging.info(f"Skipping {finetuned_model} as it is already completed")
-            continue
+        hmodel, model, splitt, feature = finetuned_model.split("::")
 
-        hmodel, model, feature = finetuned_model.split("::")
+        if hmodel != 'flat' and split == splitt:
+            if finetuned_model in training_completed:
+                logging.info(f"Skipping {finetuned_model} as it is already completed")
+                continue
 
-        if hmodel != 'flat':
             features_path = os.path.join(features_dir, f"{feature}_features.parquet")
             X = utils.read_parquet_to_np(features_path)
 
@@ -146,6 +156,8 @@ if __name__ == "__main__":
                 y=y,
                 feature=feature,
                 reports_dir=reports_dir,
+                split=split,
+                test_size=test_size,
             )
             training_completed.append(finetuned_model)
             settings["training_completed"] = training_completed

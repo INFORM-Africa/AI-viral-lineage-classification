@@ -1,10 +1,5 @@
-import logging
-# from model_selection import train_test_split
-from sklearn.model_selection import train_test_split
-from preprocessing.read_data import normalize_hierarchies
-from classifiers import metrics as hmetrics
-import optuna
-import utils, os, time
+import logging, optuna, utils, os, time
+from model_selection import h_cross_val_score, h_train_test_split_score
 from datetime import datetime
 
 # Import the classifiers
@@ -21,21 +16,21 @@ def get_timestamp():
     now = datetime.now()
     return int(now.timestamp())
 
-def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
+def finetune_rf(features, labels, features_name, reports_dir, n_trials, cv, test_size=None):
     timestamp = get_timestamp()
-    reports_filename = os.path.join(reports_dir, f'{h_type}_rf_{features_name}_{timestamp}.txt')
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
-    
+    split = "cv" if cv else "tts"
+    reports_filename = os.path.join(reports_dir, f'{h_type}_rf_{split}_{features_name}_{timestamp}.txt')
+
+    if not cv:
+        assert test_size is not None, "test_size must be provided for train-test-split"
     
     def objective(trial):
-        # Define the search space for hyperparameters
         n_estimators = trial.suggest_int('n_estimators', 50, 1000)
         max_depth = trial.suggest_int('max_depth', 1, 20)
         min_samples_split = trial.suggest_int('min_samples_split', 2, 20)
         min_samples_leaf = trial.suggest_int('min_samples_leaf', 1, 10)
         criterion = trial.suggest_categorical('criterion', ['gini', 'entropy'])
         
-        # Instantiate the Random Forest Classifier with the suggested hyperparameters
         rf = RandomForestClassifier(
             n_estimators=n_estimators,
             max_depth=max_depth,
@@ -52,16 +47,16 @@ def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_t
             n_jobs=-1,
         )
 
-        h_clf.fit(X_train, y_train)
-        
-        # Calculate the accuracy score on the validation set
-        y_pred = h_clf.predict(X_test)
-        accuracy = hmetrics.h_f1_score(y_test, y_pred)
+        if cv:
+            scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
+            accuracy = scores.mean()
+        else:
+            accuracy = h_train_test_split_score(h_clf, features, labels, test_size=test_size)
         
         return accuracy
     
     start_time = time.time()
-    # Create a study object and optimize the objective function
+    
     study = optuna.create_study(direction='maximize')
     study.optimize(objective, n_trials=n_trials)
     end_time = time.time()
@@ -77,11 +72,13 @@ def finetune_rf(features, labels, features_name, reports_dir, test_size=0.2, n_t
     logging.info(f"Logs saved to {reports_filename}")
 
 
-def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
+def finetune_xgb(features, labels, features_name, reports_dir, n_trials, cv, test_size=None):
     timestamp = get_timestamp()
-    reports_filename = os.path.join(reports_dir, f'{h_type}_xgb_{features_name}_{timestamp}.txt')
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
-    
+    reports_filename = os.path.join(reports_dir, f'{h_type}_xgb_{split}_{features_name}_{timestamp}.txt')
+
+    if not cv:
+        assert test_size is not None, "test_size must be provided for train-test-split"
+
     def objective(trial):
         gamma = trial.suggest_float('gamma', 1e-8, 1.0, log=True)
         learning_rate = trial.suggest_float('learning_rate', 1e-3, 0.1, log=True)
@@ -111,16 +108,16 @@ def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_
             n_jobs=-1,
         )
         
-        h_clf.fit(X_train, y_train)
+        if cv:
+            scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
+            accuracy = scores.mean()
+        else:
+            accuracy = h_train_test_split_score(h_clf, features, labels, test_size=test_size)
         
-        # Calculate the accuracy score on the validation set
-        y_pred = h_clf.predict(X_test)
-        accuracy = hmetrics.h_f1_score(y_test, y_pred)
-
         return accuracy
     
     start_time = time.time()
-    # Create a study object and optimize the objective function
+    
     study = optuna.create_study(direction='maximize')
     study.optimize(objective, n_trials=n_trials)
     end_time = time.time()
@@ -135,10 +132,12 @@ def finetune_xgb(features, labels, features_name, reports_dir, test_size=0.2, n_
     logging.info(f"Finetuning completed with {study.best_value} accuracy")
     logging.info(f"Logs saved to {reports_filename}")
     
-def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
+def finetune_lgbm(features, labels, features_name, reports_dir, n_trials, cv, test_size=None):
     timestamp = get_timestamp()
-    reports_filename = os.path.join(reports_dir, f'{h_type}_lgbm_{features_name}_{timestamp}.txt')  
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)  
+    reports_filename = os.path.join(reports_dir, f'{h_type}_lgbm_{split}_{features_name}_{timestamp}.txt')
+
+    if not cv:
+        assert test_size is not None, "test_size must be provided for train-test-split"
     
     def objective(trial):
         learning_rate = trial.suggest_float('learning_rate', 1e-3, 0.1, log=True)
@@ -166,12 +165,12 @@ def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n
             n_jobs=-1,
         )
         
-        h_clf.fit(X_train, y_train)
+        if cv:
+            scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
+            accuracy = scores.mean()
+        else:
+            accuracy = h_train_test_split_score(h_clf, features, labels, test_size=test_size)
         
-        # Calculate the accuracy score on the validation set
-        y_pred = h_clf.predict(X_test)
-        accuracy = hmetrics.h_f1_score(y_test, y_pred)
-
         return accuracy
     
     start_time = time.time()
@@ -190,10 +189,13 @@ def finetune_lgbm(features, labels, features_name, reports_dir, test_size=0.2, n
     logging.info(f"Finetuning completed with {study.best_value} accuracy")
     logging.info(f"Logs saved to {reports_filename}")
     
-def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_trials=100):
+def finetune_cb(features, labels, features_name, reports_dir, cv, n_trials, test_size=None):
     timestamp = get_timestamp()
-    reports_filename = os.path.join(reports_dir, f'{h_type}_cb_{features_name}_{timestamp}.txt')
-    X_train, X_test, y_train, y_test = train_test_split(features, labels, test_size=test_size, random_state=42)
+    reports_filename = os.path.join(reports_dir, f'{h_type}_cb_{split}_{features_name}_{timestamp}.txt')
+
+    if not cv:
+        assert test_size is not None, "test_size must be provided for train-test-split"
+    
     
     def objective(trial):
         bagging_temperature = trial.suggest_float('bagging_temperature', 0, 1.0)
@@ -208,7 +210,7 @@ def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_t
             iterations=iterations,
             learning_rate=learning_rate,
             depth=depth,
-            l2_leaf_reg=l2_leaf_reg,
+            l2_leaf_reg=l2_leaf_reg, 
             bagging_temperature=bagging_temperature,
             random_strength=random_strength,
             random_state=42,
@@ -221,12 +223,12 @@ def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_t
             n_jobs=-1,
         )
         
-        h_clf.fit(X_train, y_train)
+        if cv:
+            scores = h_cross_val_score(h_clf, features, labels, n_splits=5)
+            accuracy = scores.mean()
+        else:
+            accuracy = h_train_test_split_score(h_clf, features, labels, test_size=test_size)
         
-        # Calculate the accuracy score on the validation set
-        y_pred = h_clf.predict(X_test)
-        accuracy = hmetrics.h_f1_score(y_test, y_pred)
-
         return accuracy
     
     start_time = time.time()
@@ -246,19 +248,19 @@ def finetune_cb(features, labels, features_name, reports_dir, test_size=0.2, n_t
     logging.info(f"Logs saved to {reports_filename}")
 
 
-def finetune_model_with_features(model:str, X, y, feature:str, n_trials, reports_dir:str):
+def finetune_model_with_features(model:str, X, y, feature:str, n_trials, reports_dir:str, cv:bool, test_size:float=None):
     if model == 'rf':
         logging.info(f"Finetuning {h_type.upper()} Random Forest with {feature} features")
-        finetune_rf(X, y, feature, reports_dir, n_trials=n_trials["rf"])
+        finetune_rf(X, y, feature, reports_dir, n_trials=n_trials["rf"], cv=cv, test_size=test_size)
     elif model == 'xgb':
         logging.info(f"Finetuning {h_type.upper()} XGBoost with {feature} features")
-        finetune_xgb(X, y, feature, reports_dir, n_trials=n_trials["xgb"])
+        finetune_xgb(X, y, feature, reports_dir, n_trials=n_trials["xgb"], cv=cv, test_size=test_size)
     elif model == 'lgbm':
         logging.info(f"Finetuning {h_type.upper()} LightGBM with {feature} features")
-        finetune_lgbm(X, y, feature, reports_dir, n_trials=n_trials["lgbm"])
+        finetune_lgbm(X, y, feature, reports_dir, n_trials=n_trials["lgbm"], cv=cv, test_size=test_size)
     elif model == 'cb':
         logging.info(f"Finetuning {h_type.upper()} CatBoost with {feature} features")
-        finetune_cb(X, y, feature, reports_dir, n_trials=n_trials["cb"])
+        finetune_cb(X, y, feature, reports_dir, n_trials=n_trials["cb"], cv=cv, test_size=test_size)
     else:
         raise ValueError(f"Invalid model: {model}")
 
@@ -273,19 +275,22 @@ if __name__ == "__main__":
     features_dir = settings["features_dir"]
     cleaned_data_dir = settings["cleaned_data_dir"]
     reports_dir = settings["reports_dir"]
-    os.makedirs(reports_dir, exist_ok=True)
     n_trials = settings["optuna_trials"]
     fine_tune_models = settings["fine_tune_models"]
+    test_size = settings["test_size"]
+    cv = settings["use_cross_validation"]
+    split = "cv" if cv else "tts"
+
+    os.makedirs(reports_dir, exist_ok=True)
 
     if "fine_tune_completed" in settings:
         fine_tune_completed = settings["fine_tune_completed"]
     else:
         fine_tune_completed = []
 
-    logging.info(f"Loading labels file hierarchical_labels.parquet")
-    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "hierarchical_labels.parquet"))
-    y = normalize_hierarchies(y[:, 0])
-
+    logging.info(f"Loading labels file flat_labels.parquet")
+    y = utils.read_parquet_to_np(os.path.join(cleaned_data_dir, "flat_labels.parquet"))
+    y = y.flatten()
 
     for model in fine_tune_models:
         if model not in ['rf', 'xgb', 'lgbm', 'cb']:
@@ -295,7 +300,7 @@ if __name__ == "__main__":
             if key == 'kmer':
                 ks = config['k']
                 for k in ks:
-                    fine_tune_key = f"{h_type}::{model}::kmer_{k}"
+                    fine_tune_key = f"{h_type}::{model}::{split}::kmer_{k}"
                     if fine_tune_key not in fine_tune_completed:
                         logging.info(f"Loading features file kmer_{k}_features.parquet")
                         features_path = os.path.join(features_dir, f"kmer_{k}_features.parquet")
@@ -304,9 +309,11 @@ if __name__ == "__main__":
                             model=model, 
                             X=X, 
                             y=y, 
-                            feature=f"kmer_{k}", 
-                            n_trials=n_trials, 
-                            reports_dir=reports_dir
+                            feature=f"kmer_{k}",
+                            n_trials=n_trials,
+                            reports_dir=reports_dir,
+                            cv=cv,
+                            test_size=test_size,
                         )
                         fine_tune_completed.append(fine_tune_key)
                         settings["fine_tune_completed"] = fine_tune_completed
@@ -318,7 +325,7 @@ if __name__ == "__main__":
             elif key == 'fcgr':
                 ress = config['resolution']
                 for res in ress:
-                    fine_tune_key = f"{h_type}::{model}::fcgr_{res}"
+                    fine_tune_key = f"{h_type}::{model}::{split}::fcgr_{res}"
                     if fine_tune_key not in fine_tune_completed:
                         logging.info(f"Loading features file fcgr_{res}_features.parquet")
                         features_path = os.path.join(features_dir, f"fcgr_{res}_features.parquet")
@@ -329,7 +336,9 @@ if __name__ == "__main__":
                             y=y, 
                             feature=f"fcgr_{res}", 
                             n_trials=n_trials, 
-                            reports_dir=reports_dir
+                            reports_dir=reports_dir,
+                            cv=cv,
+                            test_size=test_size,
                         )
 
                         fine_tune_completed.append(fine_tune_key)
@@ -340,7 +349,7 @@ if __name__ == "__main__":
                         logging.info(f"Skipping {fine_tune_key} as it is already completed")
                     
             elif key == 'murugaiah':
-                fine_tune_key = f"{h_type}::{model}::murugaiah"
+                fine_tune_key = f"{h_type}::{model}::{split}::murugaiah"
                 if fine_tune_key not in fine_tune_completed:
                     logging.info(f"Loading features file murugaiah_features.parquet")
                     features_path = os.path.join(features_dir, f"murugaiah_features.parquet")
@@ -351,7 +360,9 @@ if __name__ == "__main__":
                         y=y, 
                         feature=f"murugaiah", 
                         n_trials=n_trials, 
-                        reports_dir=reports_dir
+                        reports_dir=reports_dir,
+                        cv=cv,
+                        test_size=test_size,
                     )
                     fine_tune_completed.append(fine_tune_key)
                     settings["fine_tune_completed"] = fine_tune_completed
@@ -362,5 +373,3 @@ if __name__ == "__main__":
                 
             else:
                 raise ValueError(f"Invalid key: {key}")
-
-

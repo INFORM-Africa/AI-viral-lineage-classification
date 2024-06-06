@@ -71,8 +71,8 @@ def read_parquet_to_np(path):
     data = table.to_pandas().to_numpy()
     return data
 
-def read_best_hyperparameters(h_model:str, model:str, feature:str, reports_dir:str):
-    file_path = os.path.join(reports_dir, f'{h_model}_{model}_{feature}.txt')
+def read_best_hyperparameters(h_model:str, model:str, feature:str, split:str, reports_dir:str):
+    file_path = os.path.join(reports_dir, f'{h_model}_{model}_{split}_{feature}.txt')
 
     with open(file_path, 'r') as file:
         lines = file.readlines()
