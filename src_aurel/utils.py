@@ -2,6 +2,7 @@ import json, os, ast
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+from scipy.stats import wilcoxon, binomtest
 
 def load_aliases(path: str = "alias_key.json"):
     """
@@ -97,3 +98,20 @@ def write_detection_outputs(features:str, query_strategy:str, reports_dir:str, r
     reported_lineages_df.to_csv(reported_lineages_filename, sep='\t', index=False)
     missed_lineages_df.to_csv(missed_lineages_filename, sep='\t', index=False)
     detection_dates_df.to_csv(detection_dates_filename, sep='\t', index=False)
+
+
+def wilcoxon_test(df, target:str, mu0:int=0, alternative='greater'):
+    df_clean = df.dropna(subset=[target])
+    values = df_clean[target].values - mu0
+    stat, p_value = wilcoxon(values, alternative=alternative)
+    
+    return stat, p_value
+
+def sign_test(df, target:str, mu0:int=0, alternative='greater'):
+    df_clean = df.dropna(subset=[target])
+    pos = df_clean[df_clean[target] > mu0].shape[0]
+    neg = df_clean[df_clean[target] < mu0].shape[0]
+    M = (pos - neg) / 2.0
+    p = binomtest(pos, pos + neg, 0.5, alternative=alternative).pvalue
+    
+    return M, p

@@ -196,6 +196,8 @@ def finetune_cb(features, labels, features_name, reports_dir, n_trials, cv, test
             random_strength=random_strength,
             random_state=42,
             verbose=0,
+            task_type="GPU",
+            objective="RMSE",
         )
 
         if cv:

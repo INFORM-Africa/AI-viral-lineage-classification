@@ -5,7 +5,7 @@
     "features_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/dataset/features/",
     "reports_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/reports/",
     "plots_dir": "/Users/masterbee/Desktop/AIMS-PROJECT/models/plots/",
-    "fine_tune_models": ["xgb"],
+    "fine_tune_models": ["rf", "xgb"],
     "test_size": 0.2,
     "use_cross_validation": false,
     "baseline_classifiers": ["most_frequent", "uniform"],
