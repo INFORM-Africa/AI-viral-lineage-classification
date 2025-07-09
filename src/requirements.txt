@@ -15,6 +15,7 @@ decorator @ file:///home/conda/feedstock_root/build_artifacts/decorator_16415556
 distributed==2024.12.0
 exceptiongroup @ file:///home/conda/feedstock_root/build_artifacts/exceptiongroup_1720869315914/work
 executing @ file:///home/conda/feedstock_root/build_artifacts/executing_1725214404607/work
+faiss-cpu==1.11.0
 fonttools==4.55.0
 fsspec==2024.10.0
 importlib_metadata @ file:///home/conda/feedstock_root/build_artifacts/importlib-metadata_1726082825846/work
@@ -68,6 +69,7 @@ tblib==3.0.0
 tdqm==0.0.1
 tenacity==9.0.0
 threadpoolctl==3.5.0
+toml==0.10.2
 toolz==1.0.0
 tornado @ file:///private/var/folders/k1/30mswbxs7r1g6zwn8y4fyt500000gp/T/abs_a4w03z48br/croot/tornado_1718740114858/work
 tqdm==4.67.1
@@ -75,8 +77,6 @@ traitlets @ file:///home/conda/feedstock_root/build_artifacts/traitlets_17135351
 typing_extensions @ file:///home/conda/feedstock_root/build_artifacts/typing_extensions_1717802530399/work
 tzdata==2024.2
 urllib3==2.2.3
-# Editable install with no version control (VirAl==0.1.0)
--e /Users/danny/Software/CERI/Main/src
 wcwidth @ file:///home/conda/feedstock_root/build_artifacts/wcwidth_1704731205417/work
 xyzservices==2025.1.0
 zict==3.0.0

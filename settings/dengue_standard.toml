@@ -1,0 +1,59 @@
+# ======================= GENERAL SETTINGS =======================
+
+# Path to dataset to be used for training or testing. Expects a csv file for training, and a fasta file for prediction.
+DATA_PATH = "../example_input/dengue_sample.fasta"  # string
+
+# Type of feature extraction to perform
+FEATURE = "FCGR"  # string (choices: FCGR, ACS, KMER, SWF, GSP, MASH, RTD)
+
+# Name for this run, used to create the output folder name
+RUN_NAME = "BCGR_128"  # string
+
+# Specifies whether to use Dask for model parallel processing. 0 for no, 1 for yes.
+DASK = 0  # integer (choices: 0, 1, default: 0)
+
+# Specifies whether to use dengue segment modelling. 0 for no, 1 for yes.
+SEGMENT = 0  # integer (choices: 0, 1, default: 0)
+
+# ======================= FEATURE EXTRACTION SETTINGS =======================
+
+# Specifies how degenerate nucleotides should be handled: removed or replaced randomly
+DEG = "remove"  # string (choices: remove, replace)
+
+# Specifies the word length for kmer, Mash, SWF, and RTD feature extraction
+K = 6  # integer
+
+# Specifies the image resolution for FCGR feature extraction
+RES = 128  # integer (choices: 32, 64, 128, 256)
+
+# Specifies the chaos game mode: FCGR (Frequency) or BCGR (Binary)
+MODE = "BCGR"  # string (choices: FCGR, BCGR, default: FCGR)
+
+# Specifies the sketch size for Mash feature extraction
+SIZE = 1000  # integer (choices: 1000, 2000)
+
+# Specifies the form of numeric mapping for GSP feature extraction
+MAP = "real"  # string (choices: real, eiip, justa, pp)
+
+# Specifies the spaced pattern for SWF feature extraction
+PATTERN = "1101"  # string
+
+# ======================= MODEL SETTINGS =======================
+
+# Name for the model, used in the output folder name
+MODEL_NAME = "craft"  # string
+
+# Splitting criterion for Random Forest
+CRITERION = "entropy"  # string (choices: gini, entropy, default: entropy)
+
+# Class weight for handling imbalanced datasets
+CLASS_WEIGHT = "balanced"  # string (choices: balanced, None, default: balanced)
+
+# Number of workers for the Dask cluster. Only used if DASK is 1.
+N_WORKERS = 1  # integer (default: 1)
+
+# Low resource mode: 0 for full dataset, 1 for limited dataset (4 samples per class). Cannot be used if SEGMENT or DASK are 1.
+LOW_RESOURCE = 0  # integer (choices: 0, 1, default: 0)
+
+# Number of top features to use for second model. Use -1 for all features. Cannot be used if SEGMENT or DASK are 1.
+NUM_FEATURES = 5000  # integer

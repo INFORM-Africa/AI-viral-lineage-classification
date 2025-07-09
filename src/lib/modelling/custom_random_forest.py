@@ -19,7 +19,7 @@ class CustomRandomForest:
         self.fair_split = fair_split
         self.tree_paths = []
         self.tree_stats = []
-        self.save_path = f'{save_path}/{class_weight}/{criterion}/{max_depth}'
+        self.save_path = save_path
 
     def fit(self, X, y):
         # Scatter data to the worker
@@ -109,7 +109,6 @@ class CustomRandomForest:
         # Convert list of predictions to an array
         predictions = np.array(predictions)
 
-        print(predictions.shape)
         # Majority vote across all predictions
         if predictions.shape[0] > 1:
             # Use mode to find the most common class label among the predictions
@@ -122,10 +121,8 @@ class CustomRandomForest:
     @staticmethod
     def load_and_predict(path, X):
         # Load the trained tree from disk
-        print(path)
         tree = joblib.load(path)
         prediction = tree.predict(X)
-        print(prediction.shape)
         del tree  # Optionally clear memory
         return prediction
 
@@ -152,8 +149,11 @@ class CustomRandomForest:
         # Load model metadata from disk
         model_metadata = joblib.load(path)
         
-        # Create a new instance of CompactRandomForest
-        model = cls(client, model_metadata['n_estimators'], model_metadata['max_depth'])
+        # Extract the save_path from the path
+        save_path = os.path.dirname(path)
+        
+        # Create a new instance of CustomRandomForest
+        model = cls(client, save_path, n_estimators=model_metadata['n_estimators'], max_depth=model_metadata['max_depth'])
         model.tree_paths = model_metadata['tree_paths']
         model.tree_stats = model_metadata['tree_stats']
 
